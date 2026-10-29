@@ -1,0 +1,2332 @@
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 1cf2b8d9d..9fad05f45 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -133,6 +133,7 @@ config ARM64
+ 	select HAVE_CMPXCHG_DOUBLE
+ 	select HAVE_CMPXCHG_LOCAL
+ 	select HAVE_CONTEXT_TRACKING
++	select HAVE_COPY_THREAD_TLS
+ 	select HAVE_DEBUG_BUGVERBOSE
+ 	select HAVE_DEBUG_KMEMLEAK
+ 	select HAVE_DMA_CONTIGUOUS
+diff --git a/arch/arm64/boot/dts/Makefile b/arch/arm64/boot/dts/Makefile
+index 04a403ef8..b8e54a056 100644
+--- a/arch/arm64/boot/dts/Makefile
++++ b/arch/arm64/boot/dts/Makefile
+@@ -24,6 +24,7 @@ subdir-y += socionext
+ subdir-y += sprd
+ subdir-y += synaptics
+ subdir-y += ti
++subdir-y += samsung-gta2swifi
+ subdir-y += xiaomi-msm8937
+ subdir-y += xiaomi-sdm439
+ subdir-y += xilinx
+diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
+index b80edc1ce..cff8814ff 100644
+--- a/arch/arm64/kernel/process.c
++++ b/arch/arm64/kernel/process.c
+@@ -394,8 +394,8 @@ int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src)
+ 
+ asmlinkage void ret_from_fork(void) asm("ret_from_fork");
+ 
+-int copy_thread(unsigned long clone_flags, unsigned long stack_start,
+-		unsigned long stk_sz, struct task_struct *p)
++int copy_thread_tls(unsigned long clone_flags, unsigned long stack_start,
++		unsigned long stk_sz, struct task_struct *p, unsigned long tls)
+ {
+ 	struct pt_regs *childregs = task_pt_regs(p);
+ 
+@@ -428,11 +428,11 @@ int copy_thread(unsigned long clone_flags, unsigned long stack_start,
+ 		}
+ 
+ 		/*
+-		 * If a TLS pointer was passed to clone (4th argument), use it
+-		 * for the new thread.
++		 * If a TLS pointer was passed to clone, use it for the new
++		 * thread.
+ 		 */
+ 		if (clone_flags & CLONE_SETTLS)
+-			p->thread.uw.tp_value = childregs->regs[3];
++			p->thread.uw.tp_value = tls;
+ 	} else {
+ 		memset(childregs, 0, sizeof(struct pt_regs));
+ 		childregs->pstate = PSR_MODE_EL1h;
+diff --git a/drivers/i2c/i2c-core-base.c b/drivers/i2c/i2c-core-base.c
+index 2bdb8bc4c..e72f76fc9 100644
+--- a/drivers/i2c/i2c-core-base.c
++++ b/drivers/i2c/i2c-core-base.c
+@@ -29,6 +29,8 @@
+ #include <linux/errno.h>
+ #include <linux/gpio/consumer.h>
+ #include <linux/i2c.h>
++#include <linux/t380_gauge_trace.h>
++#include <linux/rcupdate.h>
+ #include <linux/i2c-smbus.h>
+ #include <linux/idr.h>
+ #include <linux/init.h>
+@@ -1874,10 +1876,72 @@ static int i2c_check_for_quirks(struct i2c_adapter *adap, struct i2c_msg *msgs,
+  * Adapter lock must be held when calling this function. No debug logging
+  * takes place.
+  */
++/* One explicitly bound gauge observer; no adapter-global address guess. */
++static DEFINE_MUTEX(t380_gauge_observer_lock);
++static struct t380_gauge_trace_observer __rcu *t380_gauge_observer;
++static u64 t380_gauge_registration;
++int t380_gauge_trace_register(struct t380_gauge_trace_observer *o)
++{
++ int ret = 0;
++ if (!o || !o->adapter || !o->begin || !o->end || o->address > 0x7f)
++  return -EINVAL;
++ mutex_lock(&t380_gauge_observer_lock);
++ if (rcu_access_pointer(t380_gauge_observer)) ret = -EBUSY;
++ else if (t380_gauge_registration == ~(u64)0) ret = -EOVERFLOW;
++ else {
++  o->registration = ++t380_gauge_registration;
++  rcu_assign_pointer(t380_gauge_observer, o);
++ }
++ mutex_unlock(&t380_gauge_observer_lock);
++ return ret;
++}
++EXPORT_SYMBOL_GPL(t380_gauge_trace_register);
++void t380_gauge_trace_unregister(struct t380_gauge_trace_observer *o)
++{
++ mutex_lock(&t380_gauge_observer_lock);
++ if (rcu_access_pointer(t380_gauge_observer) == o) {
++  RCU_INIT_POINTER(t380_gauge_observer, NULL);
++  synchronize_rcu();
++ }
++ mutex_unlock(&t380_gauge_observer_lock);
++}
++EXPORT_SYMBOL_GPL(t380_gauge_trace_unregister);
++struct t380_core_trace_token { u64 registration, record; };
++static struct t380_core_trace_token t380_core_trace_begin(
++ struct i2c_adapter *adap, struct i2c_msg *msgs, int num, int attempt)
++{
++ struct t380_core_trace_token token = {0, 0};
++ struct t380_gauge_trace_observer *o;
++ int i;
++ rcu_read_lock();
++ o = rcu_dereference(t380_gauge_observer);
++ if (o && o->adapter == adap) {
++  for (i = 0; i < num; ++i) if (msgs[i].addr == o->address) {
++   token.registration = o->registration;
++   token.record = o->begin(o->context, msgs, num, attempt);
++   break;
++  }
++ }
++ rcu_read_unlock();
++ return token;
++}
++static void t380_core_trace_end(struct t380_core_trace_token token,
++ struct i2c_adapter *adap, struct i2c_msg *msgs, int num, int ret)
++{
++ struct t380_gauge_trace_observer *o;
++ if (!token.record) return;
++ rcu_read_lock();
++ o = rcu_dereference(t380_gauge_observer);
++ if (o && o->adapter == adap && o->registration == token.registration)
++  o->end(o->context, token.record, msgs, num, ret);
++ rcu_read_unlock();
++}
++
+ int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+ {
+ 	unsigned long orig_jiffies;
+ 	int ret, try;
++ struct t380_core_trace_token gauge_trace;
+ 
+ 	if (!adap->algo->master_xfer) {
+ 		dev_dbg(&adap->dev, "I2C level transfers not supported\n");
+@@ -1907,7 +1971,9 @@ int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+ 	/* Retry automatically on arbitration loss */
+ 	orig_jiffies = jiffies;
+ 	for (ret = 0, try = 0; try <= adap->retries; try++) {
++		gauge_trace = t380_core_trace_begin(adap, msgs, num, try);
+ 		ret = adap->algo->master_xfer(adap, msgs, num);
++		t380_core_trace_end(gauge_trace, adap, msgs, num, ret);
+ 		if (ret != -EAGAIN)
+ 			break;
+ 		if (time_after(jiffies, orig_jiffies + adap->timeout))
+diff --git a/drivers/input/touchscreen/Kconfig b/drivers/input/touchscreen/Kconfig
+index b04851de9..bd238de31 100644
+--- a/drivers/input/touchscreen/Kconfig
++++ b/drivers/input/touchscreen/Kconfig
+@@ -1364,4 +1364,12 @@ config TOUCHSCREEN_GEN_VKEYS
+ 	 To compile this driver as a module, choose M here: the
+ 	 module will be called gen_vkeys.
+ 
++config TOUCHSCREEN_T380_FTS8
++	tristate "Samsung SM-T380 FTS8 touch"
++	depends on I2C && OF && PINCTRL && REGULATOR
++	help
++	  Minimal FTS8 input support for the SM-T380 Rev05 board. Uses existing
++	  controller firmware and calibration; no firmware or calibration writes.
++	  To build a module, choose M; the module is named t380_fts8.
++
+ endif
+diff --git a/drivers/input/touchscreen/Makefile b/drivers/input/touchscreen/Makefile
+index 5011f126e..9f3da2dd5 100644
+--- a/drivers/input/touchscreen/Makefile
++++ b/drivers/input/touchscreen/Makefile
+@@ -115,3 +115,4 @@ obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_TCM)	+= synaptics_tcm/
+ obj-$(CONFIG_TOUCHSCREEN_FTS)	+= focaltech_touch/
+ obj-$(CONFIG_TOUCHSCREEN_NT36XXX)	+= nt36xxx/
+ obj-$(CONFIG_TOUCHSCREEN_GEN_VKEYS)	+= gen_vkeys.o
++obj-$(CONFIG_TOUCHSCREEN_T380_FTS8) += t380_fts8.o
+diff --git a/drivers/power/supply/Kconfig b/drivers/power/supply/Kconfig
+index 7e8aaa482..9634c8ed3 100644
+--- a/drivers/power/supply/Kconfig
++++ b/drivers/power/supply/Kconfig
+@@ -8,6 +8,77 @@ menuconfig POWER_SUPPLY
+ 
+ if POWER_SUPPLY
+ 
++config T380_DIAGNOSTIC_POWER
++	bool "Samsung T380 diagnostic charge inhibition and telemetry"
++	depends on OF && GPIOLIB && I2C=y && IIO=y && EXTCON=y
++	help
++	  Verify GPIO129 nCHGEN HIGH before diagnostic USB initialization.
++	  A dedicated high-only safety owner may program and verify conservative
++	  SM5703 settings while inhibited; charger/gauge telemetry stays read-only.
++	  Requires either the board GPIO hog or exclusive safety-owner profile.
++	  The default dedicated profile has no GPIO LOW/enable path. Does not implement
++	  charging, PD, OTG, MUIC switching, fuel gauge calibration or charge
++	  thermal policy. Keep SoC thermal protections enabled.
++
++config T380_SUPERVISED_CHARGE_TRIAL
++	bool "Development-only one-shot T380 supervised charging trial"
++	depends on T380_DIAGNOSTIC_POWER
++	default n
++	help
++	  Build a manually requested, one-shot ten-second GPIO129 lease for a
++	  fixed 5 V DCP supervised development trial. Never select for kiosk or
++	  deployment images. Requires independent review and physical supervision.
++
++config T380_FIXED5V_TIMEOUT_TRIAL
++	bool "Development-only operator-qualified fixed-5V timeout-adapter trial"
++	depends on T380_SUPERVISED_CHARGE_TRIAL
++	default n
++	help
++	  Permit the exact observed nonstandard SM5703 timeout signature only
++	  after a clean physical absence, no EP0 host SETUP and an explicit
++	  per-attachment operator declaration for the labeled fixed-5V adapter.
++	  This is not BC1.2 DCP or a general unknown-source charging path.
++
++config T380_CHARGE_SESSION_DEV
++	bool "Development-only bounded T380 charging session"
++	depends on T380_SUPERVISED_CHARGE_TRIAL
++	default n
++	help
++	  Add a separately requested, sample-renewed charging session with an
++	  absolute one-minute development cap. It shares the GPIO owner's
++	  one-shot admission token with the ten-second trial. Never select for
++	  deployment images or use without independent review and supervision.
++
++config T380_PHASE_CHARGE_DEV
++	bool "Development-only T380 phase handoff charging profile"
++	depends on T380_CHARGE_SESSION_DEV && T380_FIXED5V_TIMEOUT_TRIAL
++	default n
++	help
++	  Add a separately armed exact Belkin phase profile with one HIGH-first
++	  FIRST-to-SECOND settings handoff. FULL terminates the one-shot; there
++	  is no automatic recharge. Never select for a deployment image.
++
++config T380_ATTACHED_MAINTENANCE_DEV
++	bool "Development-only T380 attached maintenance charging profile"
++	depends on T380_PHASE_CHARGE_DEV && PM_SLEEP
++	default n
++	help
++	  Add a separate exact qualified Belkin attached-maintenance profile.
++	  A wakeup source remains held for the authorized attachment, including
++	  verified-HIGH FULL rest. Incomplete initial/recharge episodes have
++	  distinct bounded budgets. This is not unattended-charge acceptance.
++
++config T380_HOUSEHOLD_CHARGE_DEV
++	bool "Development-only locally authorized T380 household admission"
++	depends on T380_ATTACHED_MAINTENANCE_DEV
++	default n
++	help
++	  Add a separate boot-disabled, locally authorized qualified fixed-5V
++	  household profile. Ordinary physical removal pauses an incomplete
++	  episode only after GPIO HIGH and fresh dual-sensor absence. Unknown
++	  sources, host activity, PM and faults remain terminal. This is not
++	  unattended-charge acceptance.
++
+ config POWER_SUPPLY_DEBUG
+ 	bool "Power supply debug"
+ 	help
+diff --git a/drivers/power/supply/Makefile b/drivers/power/supply/Makefile
+index 31305eb2e..e4f22851b 100644
+--- a/drivers/power/supply/Makefile
++++ b/drivers/power/supply/Makefile
+@@ -86,3 +86,5 @@ obj-$(CONFIG_AXP288_FUEL_GAUGE) += axp288_fuel_gauge.o
+ obj-$(CONFIG_AXP288_CHARGER)	+= axp288_charger.o
+ obj-$(CONFIG_CHARGER_CROS_USBPD)	+= cros_usbpd-charger.o
+ obj-$(CONFIG_ARCH_QCOM)		+= qcom/
++
++obj-$(CONFIG_T380_DIAGNOSTIC_POWER) += t380_diagnostic_power.o
+diff --git a/drivers/regulator/fixed.c b/drivers/regulator/fixed.c
+index 65126c88c..250252420 100644
+--- a/drivers/regulator/fixed.c
++++ b/drivers/regulator/fixed.c
+@@ -25,6 +25,7 @@
+ #include <linux/regulator/driver.h>
+ #include <linux/regulator/fixed.h>
+ #include <linux/gpio.h>
++#include <linux/gpio/consumer.h>
+ #include <linux/slab.h>
+ #include <linux/of.h>
+ #include <linux/of_gpio.h>
+@@ -34,6 +35,7 @@
+ struct fixed_voltage_data {
+ 	struct regulator_desc desc;
+ 	struct regulator_dev *dev;
++	struct gpio_desc *t380_lcd_gpio;
+ };
+ 
+ 
+@@ -97,6 +99,85 @@ of_get_fixed_voltage_config(struct device *dev,
+ static struct regulator_ops fixed_voltage_ops = {
+ };
+ 
++/* Preserve the inherited direction and level only for the SM-T380 LCD
++ * rails. Normal panel enable/disable remains responsible for cold power order.
++ */
++static int fixed_t380_lcd_gpio_is_enabled(struct gpio_desc *gpio)
++{
++	int ret;
++
++	ret = gpiod_get_direction(gpio);
++	if (ret < 0)
++		return ret;
++	if (ret != 0)
++		return 0;
++
++	ret = gpiod_get_raw_value_cansleep(gpio);
++	if (ret < 0)
++		return ret;
++	return ret == 1;
++}
++
++static int fixed_t380_lcd_is_enabled(struct regulator_dev *rdev)
++{
++	struct fixed_voltage_data *data = rdev_get_drvdata(rdev);
++
++	return fixed_t380_lcd_gpio_is_enabled(data->t380_lcd_gpio);
++}
++
++static int fixed_t380_lcd_enable(struct regulator_dev *rdev)
++{
++	struct fixed_voltage_data *data = rdev_get_drvdata(rdev);
++
++	return gpiod_direction_output_raw(data->t380_lcd_gpio, 1);
++}
++
++static int fixed_t380_lcd_disable(struct regulator_dev *rdev)
++{
++	struct fixed_voltage_data *data = rdev_get_drvdata(rdev);
++
++	return gpiod_direction_output_raw(data->t380_lcd_gpio, 0);
++}
++
++static struct regulator_ops fixed_t380_lcd_ops = {
++	.enable = fixed_t380_lcd_enable,
++	.disable = fixed_t380_lcd_disable,
++	.is_enabled = fixed_t380_lcd_is_enabled,
++};
++
++static int fixed_t380_lcd_request(struct platform_device *pdev,
++				struct fixed_voltage_config *config,
++				struct fixed_voltage_data *data)
++{
++	enum of_gpio_flags flags;
++	int gpio, ret;
++
++	gpio = of_get_named_gpio_flags(pdev->dev.of_node, "gpio", 0, &flags);
++	if (gpio < 0)
++		return gpio;
++	if (!gpio_is_valid(gpio) || gpio != config->gpio || flags ||
++	    !config->enable_high || config->gpio_is_open_drain ||
++	    config->enabled_at_boot || config->init_data->constraints.boot_on ||
++	    config->init_data->constraints.always_on) {
++		dev_err(&pdev->dev,
++			"T380 LCD rail requires active-high push-pull without boot/always-on\n");
++		return -EINVAL;
++	}
++
++	/* Request without gpio_request_one(): no direction or level write.
++	 * GPIO devres precedes regulator devres, so unregister runs first.
++	 */
++	ret = devm_gpio_request(&pdev->dev, gpio, config->supply_name);
++	if (ret)
++		return ret;
++	data->t380_lcd_gpio = gpio_to_desc(gpio);
++	if (!data->t380_lcd_gpio)
++		return -EINVAL;
++
++	ret = fixed_t380_lcd_gpio_is_enabled(data->t380_lcd_gpio);
++	return ret < 0 ? ret : 0;
++}
++
+ static int reg_fixed_voltage_probe(struct platform_device *pdev)
+ {
+ 	struct fixed_voltage_config *config;
+@@ -150,25 +231,35 @@ static int reg_fixed_voltage_probe(struct platform_device *pdev)
+ 
+ 	drvdata->desc.fixed_uV = config->microvolts;
+ 
+-	if (gpio_is_valid(config->gpio)) {
+-		cfg.ena_gpio = config->gpio;
+-		if (pdev->dev.of_node)
+-			cfg.ena_gpio_initialized = true;
+-	}
+-	cfg.ena_gpio_invert = !config->enable_high;
+-	if (config->enabled_at_boot) {
+-		if (config->enable_high)
+-			cfg.ena_gpio_flags |= GPIOF_OUT_INIT_HIGH;
+-		else
+-			cfg.ena_gpio_flags |= GPIOF_OUT_INIT_LOW;
++	if (pdev->dev.of_node && of_property_read_bool(pdev->dev.of_node,
++					"samsung,t380-preserve-lcd-rail")) {
++		ret = fixed_t380_lcd_request(pdev, config, drvdata);
++		if (ret)
++			return ret;
++		drvdata->desc.ops = &fixed_t380_lcd_ops;
++		/* Driver owns the GPIO; regulator core must not request/free it. */
++		cfg.ena_gpio = -EINVAL;
+ 	} else {
+-		if (config->enable_high)
+-			cfg.ena_gpio_flags |= GPIOF_OUT_INIT_LOW;
+-		else
+-			cfg.ena_gpio_flags |= GPIOF_OUT_INIT_HIGH;
++		if (gpio_is_valid(config->gpio)) {
++			cfg.ena_gpio = config->gpio;
++			if (pdev->dev.of_node)
++				cfg.ena_gpio_initialized = true;
++		}
++		cfg.ena_gpio_invert = !config->enable_high;
++		if (config->enabled_at_boot) {
++			if (config->enable_high)
++				cfg.ena_gpio_flags |= GPIOF_OUT_INIT_HIGH;
++			else
++				cfg.ena_gpio_flags |= GPIOF_OUT_INIT_LOW;
++		} else {
++			if (config->enable_high)
++				cfg.ena_gpio_flags |= GPIOF_OUT_INIT_LOW;
++			else
++				cfg.ena_gpio_flags |= GPIOF_OUT_INIT_HIGH;
++		}
++		if (config->gpio_is_open_drain)
++			cfg.ena_gpio_flags |= GPIOF_OPEN_DRAIN;
+ 	}
+-	if (config->gpio_is_open_drain)
+-		cfg.ena_gpio_flags |= GPIOF_OPEN_DRAIN;
+ 
+ 	cfg.dev = &pdev->dev;
+ 	cfg.init_data = config->init_data;
+diff --git a/drivers/rpmsg/rpm-smd.c b/drivers/rpmsg/rpm-smd.c
+index a61c72bfc..7cdde5247 100644
+--- a/drivers/rpmsg/rpm-smd.c
++++ b/drivers/rpmsg/rpm-smd.c
+@@ -740,7 +740,8 @@ static int msm_rpm_flush_requests(bool print)
+ 
+ 		ret = msm_rpm_trysend_smd_buffer(s->buf, get_buf_len(s->buf));
+ 
+-		WARN_ON(ret != 0);
++		if (WARN_ON(ret != 0))
++			return ret;
+ 		trace_rpm_smd_send_sleep_set(get_msg_id(s->buf), type, id);
+ 
+ 		s->valid = false;
+diff --git a/drivers/soc/qcom/wcnss/wcnss_wlan.c b/drivers/soc/qcom/wcnss/wcnss_wlan.c
+index 7141b4997..eb772a39a 100644
+--- a/drivers/soc/qcom/wcnss/wcnss_wlan.c
++++ b/drivers/soc/qcom/wcnss/wcnss_wlan.c
+@@ -384,6 +384,7 @@ static struct {
+ 	struct resource	*gpios_5wire;
+ 	const struct dev_pm_ops *pm_ops;
+ 	int		triggered;
++	int		config_error;
+ 	int		smd_channel_ready;
+ 	u32		wlan_rx_buff_count;
+ 	int		is_vsys_adc_channel;
+@@ -575,6 +576,15 @@ static ssize_t wcnss_mac_addr_show(struct device *dev,
+ 
+ static DEVICE_ATTR_RW(wcnss_mac_addr);
+ 
++/* Snapshot only: the existing exported getters also reject shutdown state. */
++static ssize_t wcnss_ready_show(struct device *dev,
++                               struct device_attribute *attr, char *buf)
++{
++	return scnprintf(buf, PAGE_SIZE, "%u\n",
++			 !!(wcnss_device_ready() && wcnss_cbc_complete()));
++}
++static DEVICE_ATTR_RO(wcnss_ready);
++
+ static ssize_t thermal_mitigation_show(struct device *dev,
+ 				       struct device_attribute *attr,
+ 				       char *buf)
+@@ -1305,8 +1315,10 @@ void wcnss_reset_fiq(bool clk_chk_en)
+ 			wcnss_log_debug_regs_on_bite();
+ 		} else {
+ 			wcnss_pronto_log_debug_regs();
++#ifdef CONFIG_WCNSS_REGISTER_DUMP_ON_BITE
+ 			if (wcnss_get_mux_control())
+ 				wcnss_log_iris_regs();
++#endif
+ 		}
+ 		if (!wcnss_device_is_shutdown()) {
+ 			/* Insert memory barrier before writing fiq register */
+@@ -1326,6 +1338,7 @@ static struct attribute *wcnss_attrs[] = {
+ 	&dev_attr_thermal_mitigation.attr,
+ 	&dev_attr_wcnss_version.attr,
+ 	&dev_attr_wcnss_mac_addr.attr,
++	&dev_attr_wcnss_ready.attr,
+ 	&dev_attr_bt_profile.attr,
+ 	NULL,
+ };
+@@ -1585,8 +1598,8 @@ wcnss_pronto_gpios_config(struct platform_device *pdev, bool enable)
+ 	return rc;
+ 
+ fail:
+-	for (j = WCNSS_WLAN_NUM_GPIOS - 1; j >= 0; j--) {
+-		int gpio = of_get_gpio(pdev->dev.of_node, i);
++	for (j = i - 1; j >= 0; j--) {
++		int gpio = of_get_gpio(pdev->dev.of_node, j);
+ 
+ 		gpio_free(gpio);
+ 	}
+@@ -1674,7 +1687,8 @@ static int wcnss_ctrl_probe(struct rpmsg_device *rpdev)
+ 
+ static void wcnss_ctrl_remove(struct rpmsg_device *rpdev)
+ {
+-	penv->smd_channel_ready = 0;
++	if (penv)
++		penv->smd_channel_ready = 0;
+ 	of_platform_depopulate(&rpdev->dev);
+ }
+ 
+@@ -1684,7 +1698,7 @@ static int wcnss_rpmsg_resource_init(void)
+ 					 WQ_UNBOUND, 1);
+ 	if (!penv->event_wq) {
+ 		wcnss_log(ERR, "failed to allocate workqueue");
+-		return -EFAULT;
++		return -ENOMEM;
+ 	}
+ 	INIT_LIST_HEAD(&penv->event_list);
+ 	spin_lock_init(&penv->event_lock);
+@@ -1696,7 +1710,10 @@ static int wcnss_rpmsg_resource_init(void)
+ 
+ static void wcnss_rpmsg_resource_deinit(void)
+ {
+-	destroy_workqueue(penv->event_wq);
++	if (penv && penv->event_wq) {
++		destroy_workqueue(penv->event_wq);
++		penv->event_wq = NULL;
++	}
+ }
+ 
+ static const struct rpmsg_device_id wcnss_ctrl_of_match[] = {
+@@ -2884,14 +2901,14 @@ static int wcnss_pm_notify(struct notifier_block *b,
+ 	switch (event) {
+ 	case PM_SUSPEND_PREPARE:
+ 		down_write(&wcnss_pm_sem);
+-		if (penv->wake_state && penv->ops)
++		if (penv && penv->wake_state && penv->ops)
+ 			qcom_smem_state_update_bits(penv->wake_state,
+ 						    AWAKE_BIT, 0);
+ 		break;
+ 
+ 	case PM_POST_SUSPEND:
+ 		up_write(&wcnss_pm_sem);
+-		if (penv->wake_state && penv->ops)
++		if (penv && penv->wake_state && penv->ops)
+ 			qcom_smem_state_update_bits(penv->wake_state, AWAKE_BIT,
+ 						    AWAKE_BIT);
+ 		break;
+@@ -2977,6 +2994,8 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 	int is_pronto_vadc;
+ 	int is_pronto_v3;
+ 	int pil_retry = 0;
++	bool gpios_configured = false;
++	bool qos_work_initialized = false;
+ 	struct device_node *node = (&pdev->dev)->of_node;
+ 	int has_pronto_hw = of_property_read_bool(node, "qcom,has-pronto-hw");
+ 
+@@ -2996,6 +3015,7 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 	rc = wcnss_parse_voltage_regulator(&penv->wlan_config, &pdev->dev);
+ 	if (rc) {
+ 		wcnss_log(ERR, "Failed to parse voltage regulators\n");
++		ret = rc;
+ 		goto fail;
+ 	}
+ 
+@@ -3036,7 +3056,7 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 		if (!penv->gpios_5wire) {
+ 			wcnss_log(ERR, "insufficient IO resources\n");
+ 			ret = -ENOENT;
+-			goto fail_gpio_res;
++			goto fail;
+ 		}
+ 		ret = wcnss_gpios_config(penv->gpios_5wire, true);
+ 	} else {
+@@ -3045,9 +3065,11 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 
+ 	if (ret) {
+ 		wcnss_log(ERR, "gpios config failed.\n");
+-		goto fail_gpio_res;
++		goto fail;
+ 	}
+ 
++	gpios_configured = true;
++
+ 	/* allocate resources */
+ 	penv->mmio_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+ 							"wcnss_mmio");
+@@ -3059,15 +3081,20 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 	if (!(penv->mmio_res && penv->tx_irq_res && penv->rx_irq_res)) {
+ 		wcnss_log(ERR, "insufficient resources\n");
+ 		ret = -ENOENT;
+-		goto fail_res;
++		goto fail;
+ 	}
+ 	INIT_WORK(&penv->wcnssctrl_rx_work, wcnssctrl_rx_handler);
+ 	INIT_WORK(&penv->wcnssctrl_version_work, wcnss_send_version_req);
+ 	INIT_WORK(&penv->wcnss_pm_config_work, wcnss_send_pm_config);
+ 	INIT_WORK(&penv->wcnssctrl_nvbin_dnld_work, wcnss_nvbin_dnld_main);
+ 	INIT_DELAYED_WORK(&penv->wcnss_pm_qos_del_req, wcnss_pm_qos_enable_pc);
++	qos_work_initialized = true;
+ 
+ 	penv->wcnss_wake_lock = wakeup_source_register(&pdev->dev, "wcnss");
++	if (!penv->wcnss_wake_lock) {
++		ret = -ENOMEM;
++		goto fail;
++	}
+ 	/* Add pm_qos request to disable power collapse for DDR */
+ 	wcnss_disable_pc_add_req();
+ 
+@@ -3079,7 +3106,7 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR, "%s: resource pronto_phy_base failed\n",
+ 			       __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 		penv->msm_wcnss_base =
+ 			devm_ioremap_resource(&pdev->dev, res);
+@@ -3091,16 +3118,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR, "%s: resource riva_phy_base failed\n",
+ 			       __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 		penv->msm_wcnss_base =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 	}
+ 
+-	if (!penv->msm_wcnss_base) {
+-		ret = -ENOMEM;
++	if (IS_ERR(penv->msm_wcnss_base)) {
++		ret = PTR_ERR(penv->msm_wcnss_base);
++		penv->msm_wcnss_base = NULL;
+ 		wcnss_log(ERR, "%s: ioremap wcnss physical failed\n", __func__);
+-		goto fail_ioremap;
++		goto fail;
+ 	}
+ 
+ 	penv->wlan_config.msm_wcnss_base = penv->msm_wcnss_base;
+@@ -3112,16 +3140,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR, "%s: resource riva_ccu_base failed\n",
+ 			       __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 		penv->riva_ccu_base =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->riva_ccu_base) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->riva_ccu_base)) {
++			ret = PTR_ERR(penv->riva_ccu_base);
++			penv->riva_ccu_base = NULL;
+ 			wcnss_log(ERR, "%s: ioremap riva ccu physical failed\n",
+ 			       __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 	} else {
+ 		res = platform_get_resource_byname(pdev,
+@@ -3131,16 +3160,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR, "%s: resource pronto_a2xb_base failed\n",
+ 			       __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 		penv->pronto_a2xb_base =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->pronto_a2xb_base) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->pronto_a2xb_base)) {
++			ret = PTR_ERR(penv->pronto_a2xb_base);
++			penv->pronto_a2xb_base = NULL;
+ 			wcnss_log(ERR,
+ 			"%s: ioremap pronto a2xb physical failed\n", __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3150,16 +3180,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR, "%s: resource pronto_ccpu_base failed\n",
+ 			       __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 		penv->pronto_ccpu_base =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->pronto_ccpu_base) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->pronto_ccpu_base)) {
++			ret = PTR_ERR(penv->pronto_ccpu_base);
++			penv->pronto_ccpu_base = NULL;
+ 			wcnss_log(ERR,
+ 			"%s: ioremap pronto ccpu physical failed\n", __func__);
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 
+ 		/* for reset FIQ */
+@@ -3168,7 +3199,7 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 		if (!res) {
+ 			wcnss_log(ERR, "insufficient irq mem resources\n");
+ 			ret = -ENOENT;
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 		penv->fiq_reg = ioremap_nocache(res->start, resource_size(res));
+ 		if (!penv->fiq_reg) {
+@@ -3176,7 +3207,7 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			"ioremap_nocache() failed fiq_reg addr:%pr\n",
+ 			&res->start);
+ 			ret = -ENOMEM;
+-			goto fail_ioremap;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3186,16 +3217,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR, "%s: resource pronto_saw2_base failed\n",
+ 			       __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 		penv->pronto_saw2_base =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->pronto_saw2_base) {
++		if (IS_ERR(penv->pronto_saw2_base)) {
+ 			wcnss_log(ERR,
+ 			"%s: ioremap wcnss physical(saw2) failed\n", __func__);
+-			ret = -ENOMEM;
+-			goto fail_ioremap2;
++			ret = PTR_ERR(penv->pronto_saw2_base);
++			penv->pronto_saw2_base = NULL;
++			goto fail;
+ 		}
+ 
+ 		penv->pronto_pll_base =
+@@ -3204,7 +3236,7 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			wcnss_log(ERR,
+ 			"%s: ioremap wcnss physical(pll) failed\n", __func__);
+ 			ret = -ENOMEM;
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3214,16 +3246,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR,
+ 			"%s: resource wlan_tx_phy_aborts failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 		penv->wlan_tx_phy_aborts =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->wlan_tx_phy_aborts) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->wlan_tx_phy_aborts)) {
++			ret = PTR_ERR(penv->wlan_tx_phy_aborts);
++			penv->wlan_tx_phy_aborts = NULL;
+ 			wcnss_log(ERR, "%s: ioremap wlan TX PHY failed\n",
+ 				  __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3233,16 +3266,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR,
+ 			"%s: get wlan_brdg_err_source res failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 		penv->wlan_brdg_err_source =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->wlan_brdg_err_source) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->wlan_brdg_err_source)) {
++			ret = PTR_ERR(penv->wlan_brdg_err_source);
++			penv->wlan_brdg_err_source = NULL;
+ 			wcnss_log(ERR, "%s: ioremap wlan BRDG ERR failed\n",
+ 				  __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3252,16 +3286,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR, "%s: resource wlan_tx_status failed\n",
+ 			       __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 		penv->wlan_tx_status =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->wlan_tx_status) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->wlan_tx_status)) {
++			ret = PTR_ERR(penv->wlan_tx_status);
++			penv->wlan_tx_status = NULL;
+ 			wcnss_log(ERR, "%s: ioremap wlan TX STATUS failed\n",
+ 				   __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3271,16 +3306,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR,
+ 			"%s: resource alarms_txctl failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 		penv->alarms_txctl =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->alarms_txctl) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->alarms_txctl)) {
++			ret = PTR_ERR(penv->alarms_txctl);
++			penv->alarms_txctl = NULL;
+ 			wcnss_log(ERR,
+ 			"%s: ioremap alarms TXCTL failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3290,16 +3326,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR,
+ 			"%s: resource alarms_tactl failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 		penv->alarms_tactl =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->alarms_tactl) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->alarms_tactl)) {
++			ret = PTR_ERR(penv->alarms_tactl);
++			penv->alarms_tactl = NULL;
+ 			wcnss_log(ERR,
+ 			"%s: ioremap alarms TACTL failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 
+ 		res = platform_get_resource_byname(pdev,
+@@ -3309,16 +3346,17 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			ret = -EIO;
+ 			wcnss_log(ERR,
+ 			"%s: resource pronto_mcu_base failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 		penv->pronto_mcu_base =
+ 			devm_ioremap_resource(&pdev->dev, res);
+ 
+-		if (!penv->pronto_mcu_base) {
+-			ret = -ENOMEM;
++		if (IS_ERR(penv->pronto_mcu_base)) {
++			ret = PTR_ERR(penv->pronto_mcu_base);
++			penv->pronto_mcu_base = NULL;
+ 			wcnss_log(ERR,
+ 			"%s: ioremap pronto mcu physical failed\n", __func__);
+-			goto fail_ioremap2;
++			goto fail;
+ 		}
+ 
+ 		if (of_property_read_bool(node,
+@@ -3327,7 +3365,7 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 			if (ret) {
+ 				wcnss_log(ERR,
+ 				"%s: failed to get dual band info\n", __func__);
+-				goto fail_ioremap2;
++				goto fail;
+ 			}
+ 		}
+ 	}
+@@ -3388,36 +3426,47 @@ wcnss_trigger_config(struct platform_device *pdev)
+ 
+ 	if (IS_ERR(penv->pil)) {
+ 		wcnss_reset_fiq(false);
+-		if (penv->wcnss_notif_hdle)
+-			subsys_notif_unregister_notifier(penv->wcnss_notif_hdle,
+-							 &wnb);
+ 		penv->pil = NULL;
+-		goto fail_ioremap2;
++		goto fail;
+ 	}
+ 	/* Remove pm_qos request */
+ 	wcnss_disable_pc_remove_req();
+ 
+ 	return 0;
+ 
+-fail_ioremap2:
+-	if (penv->fiq_reg)
+-		iounmap(penv->fiq_reg);
+-fail_ioremap:
+-	wakeup_source_unregister(penv->wcnss_wake_lock);
+-fail_res:
+-	if (!has_pronto_hw)
+-		wcnss_gpios_config(penv->gpios_5wire, false);
+-	else if (penv->use_pinctrl)
+-		wcnss_pinctrl_set_state(false);
+-	else
+-		wcnss_pronto_gpios_config(pdev, false);
+-fail_gpio_res:
+-	wcnss_disable_pc_remove_req();
+ fail:
+-	if (penv->wcnss_notif_hdle)
++	/* Stop producers before releasing the QoS request and its wake source.
++	 * The notifier unregister synchronizes any in-flight callback; then
++	 * cancel the initialized delayed work so it cannot re-vote ownership.
++	 */
++	if (penv->wcnss_notif_hdle) {
+ 		subsys_notif_unregister_notifier(penv->wcnss_notif_hdle, &wnb);
+-	penv = NULL;
+-	return ret;
++		penv->wcnss_notif_hdle = NULL;
++	}
++	if (qos_work_initialized)
++		cancel_delayed_work_sync(&penv->wcnss_pm_qos_del_req);
++	wcnss_disable_pc_remove_req();
++	if (penv->wcnss_wake_lock) {
++		wakeup_source_unregister(penv->wcnss_wake_lock);
++		penv->wcnss_wake_lock = NULL;
++	}
++	if (penv->fiq_reg) {
++		iounmap(penv->fiq_reg);
++		penv->fiq_reg = NULL;
++	}
++	if (gpios_configured) {
++		if (!has_pronto_hw)
++			wcnss_gpios_config(penv->gpios_5wire, false);
++		else if (penv->use_pinctrl)
++			wcnss_pinctrl_set_state(false);
++		else
++			wcnss_pronto_gpios_config(pdev, false);
++	}
++	/* Keep the platform-owned environment; failed trigger stays latched
++	 * until reboot rather than retry partially acquired resources.
++	 */
++	penv->config_error = ret ? ret : -EIO;
++	return penv->config_error;
+ }
+ 
+ /* Driver requires to directly vote the snoc clocks
+@@ -3520,6 +3569,9 @@ static int wcnss_node_open(struct inode *inode, struct file *file)
+ 	if (!penv)
+ 		return -EFAULT;
+ 
++	if (penv->config_error)
++		return penv->config_error;
++
+ 	if (!penv->triggered) {
+ 		wcnss_log(INFO, DEVICE " triggered by userspace\n");
+ 		pdev = penv->pdev;
+@@ -3643,8 +3695,7 @@ static int wcnss_notif_cb(struct notifier_block *this, unsigned long code,
+ 	int ret, xo_mode;
+ 	void *priv;
+ 
+-	if (!(code >= SUBSYS_NOTIF_MIN_INDEX) &&
+-	    (code <= SUBSYS_NOTIF_MAX_INDEX)) {
++	if (!penv || code > SUBSYS_NOTIF_MAX_INDEX) {
+ 		wcnss_log(DBG, "%s: Invaild subsystem notification code: %lu\n",
+ 			  __func__, code);
+ 		return NOTIFY_DONE;
+@@ -3712,7 +3763,8 @@ static const struct file_operations wcnss_node_fops = {
+ 
+ static int wcnss_cdev_register(struct platform_device *pdev)
+ {
+-	int ret = 0;
++	struct device *dev;
++	int ret;
+ 
+ 	ret = alloc_chrdev_region(&penv->dev_ctrl, 0, 1, CTRL_DEVICE);
+ 	if (ret < 0) {
+@@ -3726,19 +3778,24 @@ static int wcnss_cdev_register(struct platform_device *pdev)
+ 	}
+ 
+ 	penv->node_class = class_create(THIS_MODULE, "wcnss");
+-	if (!penv->node_class) {
++	if (IS_ERR(penv->node_class)) {
++		ret = PTR_ERR(penv->node_class);
+ 		wcnss_log(ERR, "NODE Device Class Creation failed\n");
+ 		goto class_create_node;
+ 	}
+ 
+-	if (device_create(penv->node_class, NULL, penv->dev_ctrl, NULL,
+-			 CTRL_DEVICE) == NULL) {
++	dev = device_create(penv->node_class, NULL, penv->dev_ctrl, NULL,
++			    CTRL_DEVICE);
++	if (IS_ERR(dev)) {
++		ret = PTR_ERR(dev);
+ 		wcnss_log(ERR, "CTRL Device Creation failed\n");
+ 		goto device_create_ctrl;
+ 	}
+ 
+-	if (device_create(penv->node_class, NULL, penv->dev_node, NULL,
+-			  DEVICE) == NULL) {
++	dev = device_create(penv->node_class, NULL, penv->dev_node, NULL,
++			    DEVICE);
++	if (IS_ERR(dev)) {
++		ret = PTR_ERR(dev);
+ 		wcnss_log(ERR, "NODE Device Creation failed\n");
+ 		goto device_create_node;
+ 	}
+@@ -3746,11 +3803,13 @@ static int wcnss_cdev_register(struct platform_device *pdev)
+ 	cdev_init(&penv->ctrl_dev, &wcnss_ctrl_fops);
+ 	cdev_init(&penv->node_dev, &wcnss_node_fops);
+ 
+-	if (cdev_add(&penv->ctrl_dev, penv->dev_ctrl, 1) == -1) {
++	ret = cdev_add(&penv->ctrl_dev, penv->dev_ctrl, 1);
++	if (ret) {
+ 		wcnss_log(ERR, "CTRL Device addition failed\n");
+ 		goto cdev_add_ctrl;
+ 	}
+-	if (cdev_add(&penv->node_dev, penv->dev_node, 1) == -1) {
++	ret = cdev_add(&penv->node_dev, penv->dev_node, 1);
++	if (ret) {
+ 		wcnss_log(ERR, "NODE Device addition failed\n");
+ 		goto cdev_add_node;
+ 	}
+@@ -3770,7 +3829,7 @@ static int wcnss_cdev_register(struct platform_device *pdev)
+ alloc_region_node:
+ 	unregister_chrdev_region(penv->dev_ctrl, 1);
+ alloc_region_ctrl:
+-	return -ENOMEM;
++	return ret;
+ }
+ 
+ static void wcnss_cdev_unregister(struct platform_device *pdev)
+@@ -3807,24 +3866,29 @@ wcnss_wlan_probe(struct platform_device *pdev)
+ 		devm_kzalloc(&pdev->dev, MAX_CALIBRATED_DATA_SIZE, GFP_KERNEL);
+ 	if (!penv->user_cal_data) {
+ 		wcnss_log(ERR, "Failed to alloc memory for cal data.\n");
+-		return -ENOMEM;
++		ret = -ENOMEM;
++		goto fail_env;
+ 	}
+ 
++	ret = wcnss_rpmsg_resource_init();
++	if (ret)
++		goto fail_env;
++
+ 	device_property_read_u32(&pdev->dev, "qcom,sw_pta",
+ 				 &penv->sw_pta);
+ 
+ 	/* register sysfs entries */
+ 	ret = wcnss_create_sysfs(&pdev->dev);
+-	if (ret) {
+-		penv = NULL;
+-		return -ENOENT;
+-	}
++	if (ret)
++		goto fail_rpmsg;
+ 
+ 	/* register wcnss event notification */
+ 	penv->wcnss_notif_hdle = subsys_notif_register_notifier("wcnss", &wnb);
+ 	if (IS_ERR(penv->wcnss_notif_hdle)) {
+ 		wcnss_log(ERR, "register event notification failed!\n");
+-		return PTR_ERR(penv->wcnss_notif_hdle);
++		ret = PTR_ERR(penv->wcnss_notif_hdle);
++		penv->wcnss_notif_hdle = NULL;
++		goto fail_sysfs;
+ 	}
+ 
+ 	mutex_init(&penv->dev_lock);
+@@ -3857,12 +3921,28 @@ wcnss_wlan_probe(struct platform_device *pdev)
+ 			  __func__);
+ 	}
+ 
+-	return wcnss_cdev_register(pdev);
++	ret = wcnss_cdev_register(pdev);
++	if (!ret)
++		return 0;
++
++	if (penv->wake_state)
++		qcom_smem_state_put(penv->wake_state);
++	subsys_notif_unregister_notifier(penv->wcnss_notif_hdle, &wnb);
++fail_sysfs:
++	wcnss_remove_sysfs(&pdev->dev);
++fail_rpmsg:
++	wcnss_rpmsg_resource_deinit();
++fail_env:
++	penv = NULL;
++	return ret;
+ }
+ 
+ static int
+ wcnss_wlan_remove(struct platform_device *pdev)
+ {
++	if (!penv)
++		return 0;
++
+ 	if (penv->wcnss_notif_hdle)
+ 		subsys_notif_unregister_notifier(penv->wcnss_notif_hdle, &wnb);
+ 	wcnss_cdev_unregister(pdev);
+@@ -3871,6 +3951,7 @@ wcnss_wlan_remove(struct platform_device *pdev)
+ 		qcom_smem_state_put(penv->wake_state);
+ 
+ 	wcnss_remove_sysfs(&pdev->dev);
++	wcnss_rpmsg_resource_deinit();
+ 	penv = NULL;
+ 	return 0;
+ }
+@@ -3909,29 +3990,28 @@ static int __init wcnss_wlan_init(void)
+ 	if (!wcnss_ipc_log)
+ 		wcnss_log(ERR, "Unable to create log context\n");
+ 
+-	platform_driver_register(&wcnss_wlan_driver);
+-	platform_driver_register(&wcnss_wlan_ctrl_driver);
+-	ret = wcnss_rpmsg_resource_init();
+-	if (ret) {
+-		pr_err("%s : register_rpmsg_driver failed with err %d\n",
+-		       __func__, ret);
+-		goto resource_deinit;
+-	}
++	ret = platform_driver_register(&wcnss_wlan_driver);
++	if (ret)
++		goto log_bail;
++	ret = platform_driver_register(&wcnss_wlan_ctrl_driver);
++	if (ret)
++		goto wlan_bail;
+ 	ret = register_rpmsg_driver(&wcnss_rpmsg_client);
+-	if (ret) {
+-		pr_err("%s : register_rpmsg_driver failed with err %d\n",
+-		       __func__, ret);
+-		goto register_bail;
+-	}
+-	register_pm_notifier(&wcnss_pm_notifier);
++	if (ret)
++		goto ctrl_bail;
++	ret = register_pm_notifier(&wcnss_pm_notifier);
++	if (ret)
++		goto rpmsg_bail;
+ 
+ 	return 0;
+ 
+-register_bail:
+-	wcnss_rpmsg_resource_deinit();
+-resource_deinit:
++rpmsg_bail:
++	unregister_rpmsg_driver(&wcnss_rpmsg_client);
++ctrl_bail:
+ 	platform_driver_unregister(&wcnss_wlan_ctrl_driver);
++wlan_bail:
+ 	platform_driver_unregister(&wcnss_wlan_driver);
++log_bail:
+ 	ipc_log_context_destroy(wcnss_ipc_log);
+ 	wcnss_ipc_log = NULL;
+ 	return ret;
+@@ -3942,12 +4022,11 @@ static void __exit wcnss_wlan_exit(void)
+ 	if (penv) {
+ 		if (penv->pil)
+ 			subsystem_put(penv->pil);
+-		penv = NULL;
++		penv->pil = NULL;
+ 	}
+ 
+ 	unregister_pm_notifier(&wcnss_pm_notifier);
+ 	unregister_rpmsg_driver(&wcnss_rpmsg_client);
+-	wcnss_rpmsg_resource_deinit();
+ 	platform_driver_unregister(&wcnss_wlan_ctrl_driver);
+ 	platform_driver_unregister(&wcnss_wlan_driver);
+ 	ipc_log_context_destroy(wcnss_ipc_log);
+diff --git a/drivers/staging/prima/CORE/HDD/src/wlan_hdd_main.c b/drivers/staging/prima/CORE/HDD/src/wlan_hdd_main.c
+index 751178285..df7cde0e3 100644
+--- a/drivers/staging/prima/CORE/HDD/src/wlan_hdd_main.c
++++ b/drivers/staging/prima/CORE/HDD/src/wlan_hdd_main.c
+@@ -15707,8 +15707,11 @@ v_BOOL_t hdd_is_apps_power_collapse_allowed(hdd_context_t* pHddCtx)
+     concurrent_state = hdd_get_concurrency_mode();
+ 
+     if ((concurrent_state == (VOS_STA | VOS_P2P_GO)) &&
+-          !(wlan_hdd_is_GO_power_collapse_allowed(pHddCtx)))
++          !(wlan_hdd_is_GO_power_collapse_allowed(pHddCtx))) {
++        pr_warn_ratelimited("t380 wlan suspend veto: GO transition, concurrency=%d\n",
++                            concurrent_state);
+         return FALSE;
++    }
+ #ifdef WLAN_ACTIVEMODE_OFFLOAD_FEATURE
+ 
+     if(((concurrent_state == (VOS_STA | VOS_P2P_CLIENT)) || 
+@@ -15745,6 +15748,13 @@ v_BOOL_t hdd_is_apps_power_collapse_allowed(hdd_context_t* pHddCtx)
+                           "even when sco indication is set"));
+                     return TRUE;
+                 }
++                /* The saved trace lacks WLAN socket logs after freezing.
++                 * Preserve the veto state in the kernel ring buffer. */
++                pr_warn_ratelimited("t380 wlan suspend veto: pmc=%d scan=%d roam=%d connected=%d imps=%d bmps=%d\n",
++                                    pmcState, scanRspPending,
++                                    inMiddleOfRoaming, hdd_connIsConnected(
++                                    WLAN_HDD_GET_STATION_CTX_PTR(pAdapter)),
++                                    pConfig->fIsImpsEnabled, pConfig->fIsBmpsEnabled);
+                 hddLog( LOGE, "%s: do not allow APPS power collapse-"
+                         "pmcState = %d scanRspPending = %d "
+                         "inMiddleOfRoaming = %d connected = %d",
+diff --git a/drivers/staging/prima/CORE/VOSS/src/vos_nvitem.c b/drivers/staging/prima/CORE/VOSS/src/vos_nvitem.c
+index 540c52307..98602d997 100644
+--- a/drivers/staging/prima/CORE/VOSS/src/vos_nvitem.c
++++ b/drivers/staging/prima/CORE/VOSS/src/vos_nvitem.c
+@@ -54,6 +54,7 @@
+ #include "wlan_hdd_main.h"
+ #include <net/cfg80211.h>
+ #include <linux/firmware.h>
++#include <linux/etherdevice.h>
+ #include <linux/vmalloc.h>
+ 
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0))
+@@ -810,30 +811,38 @@ VOS_STATUS vos_nv_get_dictionary_data(void)
+ fail:
+    return vosStatus;
+ }
+-//added by liulekang start
+-VOS_STATUS get_mac_buf(char *pfileName,v_VOID_t *pCtx, char* mac, int len)
++/* Optional four-address override; keep the NV addresses if unavailable. */
++static VOS_STATUS get_mac_buf(const char *filename, v_VOID_t *ctx,
++                             char *mac, size_t len)
+ {
++    const struct firmware *fw = NULL;
++    hdd_context_t *hdd = ctx;
++    VOS_STATUS result = VOS_STATUS_E_FAILURE;
++    size_t offset;
+     int status;
+-    VOS_STATUS retval = VOS_STATUS_SUCCESS;
+-    hdd_context_t *pHddCtx = (hdd_context_t*)pCtx;
+-    status = request_firmware(&pHddCtx->fw, pfileName, pHddCtx->parent_dev);
+-    if(status || !pHddCtx->fw || !pHddCtx->fw->data) {
+-        hddLog(VOS_TRACE_LEVEL_FATAL, "%s: Firmware %s download failed",
+-                __func__, pfileName);
+-        retval = VOS_STATUS_E_FAILURE;
+-    }
+-    else {
+-        memcpy(mac, (v_VOID_t *)pHddCtx->fw->data, len);
+-        hddLog(VOS_TRACE_LEVEL_FATAL, "%s: Firmware size",
+-                        __func__);
+-        /*hddLog(VOS_TRACE_LEVEL_FATAL, "%s: Firmware size = %d",
+-                __func__, pHddCtx->fw->size);*/
+ 
+-        retval = VOS_STATUS_SUCCESS;
++    if (len != 4 * ETH_ALEN)
++        return VOS_STATUS_E_FAILURE;
++
++    /* An optional file must not wait for the userspace firmware fallback. */
++    status = request_firmware_direct(&fw, filename, hdd->parent_dev);
++    if (status)
++        return VOS_STATUS_E_FAILURE;
++
++    if (!fw || !fw->data || fw->size < len)
++        goto out;
++
++    for (offset = 0; offset < len; offset += ETH_ALEN) {
++        if (!is_valid_ether_addr(fw->data + offset))
++            goto out;
+     }
+-    return retval;
++
++    memcpy(mac, fw->data, len);
++    result = VOS_STATUS_SUCCESS;
++out:
++    release_firmware(fw);
++    return result;
+ }
+-//added by liulekang end
+ 
+ /**------------------------------------------------------------------------
+   \brief vos_nv_parseV2bin() - Parse NV2 binary
+diff --git a/drivers/staging/prima/Kbuild b/drivers/staging/prima/Kbuild
+index 866c25073..cec6f9d21 100644
+--- a/drivers/staging/prima/Kbuild
++++ b/drivers/staging/prima/Kbuild
+@@ -621,7 +621,6 @@ CDEFINES :=	-DANI_BUS_TYPE_PLATFORM=1 \
+ 		-DWLAN_WAKEUP_EVENTS \
+ 	        -DWLAN_KD_READY_NOTIFIER \
+ 		-DWLAN_FEATURE_RMC \
+-		-DWLAN_NL80211_TESTMODE \
+ 		-DFEATURE_WLAN_BATCH_SCAN \
+ 		-DFEATURE_WLAN_LPHB \
+                 -DFEATURE_WLAN_PAL_TIMER_DISABLE \
+@@ -636,6 +635,10 @@ CDEFINES :=	-DANI_BUS_TYPE_PLATFORM=1 \
+ 		-DDHCP_SERVER_OFFLOAD \
+ 		-DWLAN_FEATURE_TSF
+ 
++ifeq ($(CONFIG_NL80211_TESTMODE),y)
++CDEFINES += -DWLAN_NL80211_TESTMODE
++endif
++
+ ifneq ($(CONFIG_PRONTO_WLAN),)
+ CDEFINES += -DWCN_PRONTO
+ CDEFINES += -DWCN_PRONTO_V1
+diff --git a/drivers/thermal/Kconfig b/drivers/thermal/Kconfig
+index aca84ffdc..d450fd9ce 100644
+--- a/drivers/thermal/Kconfig
++++ b/drivers/thermal/Kconfig
+@@ -520,4 +520,12 @@ config UNIPHIER_THERMAL
+ 	  Enable this to plug in UniPhier on-chip PVT thermal driver into the
+ 	  thermal framework. The driver supports CPU thermal zone temperature
+ 	  reporting and a couple of trip points.
++config T380_CASE_THERMAL
++	tristate "Samsung SM-T380 case temperature telemetry"
++	depends on OF && IIO && THERMAL_OF
++	help
++	  Read the Samsung case thermistor as raw IIO ADC codes and apply
++	  its captured board calibration. This provides telemetry only;
++	  device-tree trip and cooling policy require separate validation.
++
+ endif
+diff --git a/drivers/thermal/Makefile b/drivers/thermal/Makefile
+index 929a216c5..cbf5b2c23 100644
+--- a/drivers/thermal/Makefile
++++ b/drivers/thermal/Makefile
+@@ -65,3 +65,4 @@ obj-$(CONFIG_ZX2967_THERMAL)	+= zx2967_thermal.o
+ obj-$(CONFIG_UNIPHIER_THERMAL)	+= uniphier_thermal.o
+ obj-$(CONFIG_THERMAL_TSENS)	+= msm-tsens.o tsens2xxx.o tsens-dbg.o tsens-mtc.o tsens1xxx.o tsens-calib.o
+ 
++obj-$(CONFIG_T380_CASE_THERMAL) += t380_case_thermal.o
+diff --git a/drivers/usb/gadget/ci13xxx_udc.c b/drivers/usb/gadget/ci13xxx_udc.c
+index 7f52713dc..5dc7e60e8 100644
+--- a/drivers/usb/gadget/ci13xxx_udc.c
++++ b/drivers/usb/gadget/ci13xxx_udc.c
+@@ -68,6 +68,7 @@
+ #include <linux/usb/gadget.h>
+ #include <linux/usb/otg.h>
+ #include <linux/usb/msm_hsusb.h>
++#include <linux/t380_diagnostic_power.h>
+ #if IS_ENABLED(CONFIG_MACH_XIAOMI_SDM439)
+ #include <xiaomi-sdm439/mach.h>
+ #endif
+@@ -2859,6 +2860,10 @@ __acquires(udc->lock)
+ 			/* Ensure buffer is read before acknowledging to h/w */
+ 			mb();
+ 		} while (!hw_test_and_clear_setup_guard());
++		/* Actual EP0 traffic vetoes the operator-qualified hostless source. */
++#ifdef CONFIG_T380_FIXED5V_TIMEOUT_TRIAL
++		t380_source_host_setup();
++#endif
+ 
+ 		type = req.bRequestType;
+ 
+diff --git a/drivers/usb/phy/phy-msm-usb.c b/drivers/usb/phy/phy-msm-usb.c
+index 57a2904ea..e8a859363 100644
+--- a/drivers/usb/phy/phy-msm-usb.c
++++ b/drivers/usb/phy/phy-msm-usb.c
+@@ -14,6 +14,7 @@
+ #include <linux/io.h>
+ #include <linux/ioport.h>
+ #include <linux/gpio.h>
++#include <linux/i2c.h>
+ #include <linux/of_gpio.h>
+ #include <linux/of_platform.h>
+ #include <linux/uaccess.h>
+@@ -28,6 +29,7 @@
+ #include <linux/reset.h>
+ #include <linux/extcon.h>
+ #include <linux/power_supply.h>
++#include <linux/t380_diagnostic_power.h>
+ #include <linux/usb.h>
+ #include <linux/usb/otg.h>
+ #include <linux/usb/ulpi.h>
+@@ -1106,6 +1108,10 @@ static int msm_otg_set_suspend(struct usb_phy *phy, int suspend)
+ 				usb_otg_state_string(phy->otg->state));
+ 	msm_otg_dbg_log_event(phy, "SET SUSPEND", suspend, phy->otg->state);
+ 
++	/* Record the bus notification even when existing LPM policy ignores it.
++	 * This callback runs in IRQ context: the source API never sleeps. */
++	if (of_find_property(phy->dev->of_node, "samsung,charge-inhibit", NULL))
++		t380_source_usb_suspend(!!suspend);
+ 	if (!(motg->caps & ALLOW_LPM_ON_DEV_SUSPEND))
+ 		return 0;
+ 
+@@ -1998,6 +2004,11 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned int mA)
+ 	union power_supply_propval pval = {0};
+ 	int psy_type;
+ 
++	/* The diagnostic image never negotiates or programs charging. */
++	if (of_find_property(motg->phy.dev->of_node,
++			     "samsung,charge-inhibit", NULL))
++		return;
++
+ 	if (g && g->is_a_peripheral)
+ 		return;
+ 
+@@ -2048,10 +2059,66 @@ static void msm_otg_notify_charger_work(struct work_struct *w)
+ 	msm_otg_notify_charger(motg, motg->notify_current_mA);
+ }
+ 
++/* T380 diagnostic-only readout of existing software state. No USB, PHY,
++ * power-supply or charger operation is issued by this attribute. */
++static ssize_t t380_usb_request_show(struct device *dev,
++		struct device_attribute *attr, char *buf)
++{
++	struct msm_otg *motg = dev_get_drvdata(dev);
++	unsigned long inputs;
++	unsigned int requested_ma;
++	int chg_type, chg_state, otg_state, suspended, in_lpm, pm_suspended;
++	int otgsc_bsv = -1, ret;
++
++	if (!motg || !of_find_property(dev->of_node,
++				     "samsung,charge-inhibit", NULL))
++		return -ENODEV;
++	ret = t380_charge_safety_ready(dev);
++	if (ret)
++		return ret;
++	/* Independent scalars, not a transaction or a persistent allowance.
++	 * notify_current_mA can remain stale after other state transitions.
++	 * Do not dereference a concurrently detached gadget or use cur_power:
++	 * the inhibited notification path deliberately does not update it. */
++	requested_ma = READ_ONCE(motg->notify_current_mA);
++	inputs = READ_ONCE(motg->inputs);
++	chg_type = READ_ONCE(motg->chg_type);
++	chg_state = READ_ONCE(motg->chg_state);
++	/* The OTG container is devm-owned for the PHY device lifetime. */
++	otg_state = READ_ONCE(motg->phy.otg->state);
++	suspended = READ_ONCE(motg->device_bus_suspend);
++	in_lpm = atomic_read(&motg->in_lpm);
++	pm_suspended = atomic_read(&motg->pm_suspended);
++	/* Reset can gate clocks while runtime PM remains active. Skip rather
++	 * than wait if reset owns the lock; -1 means no safe MMIO sample. */
++	if (mutex_trylock(&motg->lock)) {
++		ret = pm_runtime_get_if_in_use(dev);
++		if (ret > 0)
++			otgsc_bsv = !!(readl_relaxed(USB_OTGSC) & OTGSC_BSV);
++		mutex_unlock(&motg->lock);
++		/* Restore a normal autosuspend request if the real owner released
++		 * its final reference while this diagnostic held one. */
++		if (ret > 0)
++			pm_runtime_put_autosuspend(dev);
++	}
++	ret = t380_charge_safety_ready(dev);
++	if (ret)
++		return ret;
++	return scnprintf(buf, PAGE_SIZE,
++		"read_only=1 no_actuation=1 stock_owner_checked=1 atomic=0 request_age_known=0 current_permission=0\n"
++		"last_requested_ma=%u phy_charger_type=%d phy_charger_state=%d otg_state=%d inputs=0x%lx id=%d b_session_valid=%d device_bus_suspend=%d phy_in_lpm=%d pm_suspended=%d otgsc_bsv=%d\n",
++		requested_ma, chg_type, chg_state, otg_state, inputs,
++		!!(inputs & BIT(ID)), !!(inputs & BIT(B_SESS_VLD)),
++		suspended, in_lpm, pm_suspended, otgsc_bsv);
++}
++static DEVICE_ATTR_RO(t380_usb_request);
++
+ static int msm_otg_set_power(struct usb_phy *phy, unsigned int mA)
+ {
+ 	struct msm_otg *motg = container_of(phy, struct msm_otg, phy);
+ 
++	if (of_find_property(phy->dev->of_node, "samsung,charge-inhibit", NULL))
++		t380_source_usb_request(mA);
+ 	motg->notify_current_mA = mA;
+ 	/*
+ 	 * Gadget driver uses set_power method to notify about the
+@@ -2345,6 +2412,8 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
+ 		dev_dbg(otg->usb_phy->dev, "gadget off\n");
+ 		msm_otg_dbg_log_event(&motg->phy, "GADGET OFF",
+ 			motg->inputs, otg->state);
++		if (of_find_property(motg->phy.dev->of_node, "samsung,charge-inhibit", NULL))
++			t380_source_disconnect();
+ 		usb_gadget_vbus_disconnect(otg->gadget);
+ 		clear_bit(A_BUS_SUSPEND, &motg->inputs);
+ 		/* Configure BUS performance parameters to default */
+@@ -2385,6 +2454,8 @@ static int msm_otg_set_peripheral(struct usb_otg *otg,
+ 	}
+ 
+ 	if (!gadget) {
++		if (of_find_property(motg->phy.dev->of_node, "samsung,charge-inhibit", NULL))
++			t380_source_disconnect();
+ 		if (otg->state == OTG_STATE_B_PERIPHERAL) {
+ 			msm_otg_dbg_log_event(&motg->phy,
+ 				"PM RUNTIME: PERIPHERAL GET1",
+@@ -3332,6 +3403,8 @@ int msm_otg_pm_notify(struct notifier_block *notify_block,
+ 	case PM_POST_SUSPEND:
+ 		/* OTG sm_work can be armed now */
+ 		atomic_set(&motg->pm_suspended, 0);
++		if (of_find_property(motg->phy.dev->of_node, "samsung,charge-inhibit", NULL))
++			t380_source_system_suspend(false);
+ 
+ 		/* Handle any deferred wakeup events from USB during suspend */
+ 		if (motg->sm_work_pending) {
+@@ -4018,6 +4091,106 @@ static int msm_otg_vbus_notifier(struct notifier_block *nb, unsigned long event,
+ 	return NOTIFY_DONE;
+ }
+ 
++/* This driver already has one msm_otg instance. Keep the board notifier in
++ * static storage so even a callback racing with unregistration cannot follow
++ * a freed notifier_block. The blocking chain drains callbacks on unregister. */
++static DEFINE_MUTEX(t380_vbus_lock);
++static struct msm_otg *t380_vbus_motg;
++static struct extcon_dev *t380_vbus_edev;
++
++static int t380_otg_vbus_reconcile_locked(void)
++{
++	int attached;
++
++	if (!t380_vbus_motg || !t380_vbus_edev)
++		return -ENODEV;
++	attached = extcon_get_state(t380_vbus_edev, EXTCON_USB);
++	if (attached < 0)
++		return attached;
++	/* Never apply the notifier's possibly stale event argument. Both initial
++	 * state and later events read the current provider state under one lock. */
++	msm_otg_set_vbus_state(!!attached);
++	return 0;
++}
++
++static int t380_otg_vbus_event(struct notifier_block *nb,
++			      unsigned long event, void *ptr)
++{
++	int ret = 0;
++
++	mutex_lock(&t380_vbus_lock);
++	if (t380_vbus_motg)
++		ret = t380_otg_vbus_reconcile_locked();
++	mutex_unlock(&t380_vbus_lock);
++	return ret ? NOTIFY_BAD : NOTIFY_OK;
++}
++
++static struct notifier_block t380_vbus_nb = {
++	.notifier_call = t380_otg_vbus_event,
++};
++
++static void t380_otg_vbus_close(struct msm_otg *motg)
++{
++	struct extcon_dev *edev = NULL;
++
++	mutex_lock(&t380_vbus_lock);
++	if (t380_vbus_motg == motg) {
++		/* A callback already holding the lock completes before this point;
++		 * callbacks arriving later see NULL and cannot use motg. */
++		t380_vbus_motg = NULL;
++		edev = t380_vbus_edev;
++		t380_vbus_edev = NULL;
++	}
++	mutex_unlock(&t380_vbus_lock);
++	if (edev)
++		extcon_unregister_blocking_notifier(edev, EXTCON_USB,
++						 &t380_vbus_nb);
++}
++
++static int t380_otg_vbus_start(struct msm_otg *motg)
++{
++	struct device_node *node;
++	struct extcon_dev *edev;
++	int ret;
++
++	if (!of_find_property(motg->pdev->dev.of_node,
++			      "samsung,charge-inhibit", NULL))
++		return 0;
++	node = of_parse_phandle(motg->pdev->dev.of_node,
++				"samsung,vbus-extcon", 0);
++	if (!node)
++		return -EINVAL;
++	edev = extcon_find_edev_by_node(node);
++	of_node_put(node);
++	if (IS_ERR(edev))
++		return PTR_ERR(edev);
++	mutex_lock(&t380_vbus_lock);
++	if (t380_vbus_motg || t380_vbus_edev) {
++		mutex_unlock(&t380_vbus_lock);
++		return -EBUSY;
++	}
++	t380_vbus_motg = motg;
++	t380_vbus_edev = edev;
++	mutex_unlock(&t380_vbus_lock);
++	ret = extcon_register_blocking_notifier(edev, EXTCON_USB,
++						&t380_vbus_nb);
++	if (ret) {
++		mutex_lock(&t380_vbus_lock);
++		t380_vbus_motg = NULL;
++		t380_vbus_edev = NULL;
++		mutex_unlock(&t380_vbus_lock);
++		return ret;
++	}
++	/* A detach can happen between registration and this seed; either its
++	 * callback or this read sees the newest committed state under the lock. */
++	mutex_lock(&t380_vbus_lock);
++	ret = t380_otg_vbus_reconcile_locked();
++	mutex_unlock(&t380_vbus_lock);
++	if (ret)
++		t380_otg_vbus_close(motg);
++	return ret;
++}
++
+ static int msm_otg_id_notifier(struct notifier_block *nb, unsigned long event,
+ 				void *ptr)
+ {
+@@ -4144,6 +4317,41 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
+ extern void msm_usb_psy_register_psy_external_call(void);
+ #endif
+ 
++/* Keep the board's MUIC extcon alive until its USB notifier is removed. */
++static int t380_otg_link_muic(struct platform_device *pdev)
++{
++	struct device_node *node;
++	struct i2c_client *muic;
++	int ret = 0;
++
++	if (!of_find_property(pdev->dev.of_node, "samsung,charge-inhibit", NULL))
++		return 0;
++	node = of_parse_phandle(pdev->dev.of_node,
++				"samsung,vbus-extcon", 0);
++	if (!node)
++		return -EINVAL;
++	if (!of_device_is_compatible(node,
++				     "samsung,t380-sm5703-muic-observation")) {
++		of_node_put(node);
++		return -EINVAL;
++	}
++	muic = of_find_i2c_device_by_node(node);
++	of_node_put(node);
++	if (!muic)
++		return -EPROBE_DEFER;
++	device_lock(&muic->dev);
++	if (muic->addr != 0x25)
++		ret = -EINVAL;
++	else if (!device_is_bound(&muic->dev))
++		ret = -EPROBE_DEFER;
++	else if (!device_link_add(&pdev->dev, &muic->dev,
++				  DL_FLAG_AUTOREMOVE_CONSUMER))
++		ret = -ENOMEM;
++	device_unlock(&muic->dev);
++	put_device(&muic->dev);
++	return ret;
++}
++
+ static int msm_otg_probe(struct platform_device *pdev)
+ {
+ 	int ret = 0;
+@@ -4156,6 +4364,14 @@ static int msm_otg_probe(struct platform_device *pdev)
+ 	void __iomem *tcsr;
+ 	int id_irq = 0;
+ 
++	/* T380 diagnostic DT requires verified permanent charge inhibition. */
++	ret = t380_charge_safety_ready(&pdev->dev);
++	if (ret)
++		return ret;
++	ret = t380_otg_link_muic(pdev);
++	if (ret)
++		return ret;
++
+ 	dev_info(&pdev->dev, "msm_otg probe\n");
+ 
+ #if IS_ENABLED(CONFIG_MACH_XIAOMI_MSM8937)
+@@ -4876,7 +5092,6 @@ static int msm_otg_probe(struct platform_device *pdev)
+ 							1, motg->phy.edev);
+ 		}
+ 	}
+-
+ 	motg->pm_notify.notifier_call = msm_otg_pm_notify;
+ 	register_pm_notifier(&motg->pm_notify);
+ 	msm_otg_dbg_log_event(phy, "OTG PROBE", motg->caps, motg->lpm_flags);
+@@ -4886,6 +5101,24 @@ static int msm_otg_probe(struct platform_device *pdev)
+ 		msm_usb_psy_register_psy_external_call();
+ #endif
+ 
++	/* Optional diagnostic observation must not make a working USB path fail.
++	 * Register last: all earlier probe failures therefore have no new file. */
++	if (of_find_property(pdev->dev.of_node, "samsung,charge-inhibit", NULL)) {
++		ret = device_create_file(&pdev->dev, &dev_attr_t380_usb_request);
++		if (ret)
++			dev_warn(&pdev->dev, "T380 USB request observation unavailable: %d\n", ret);
++	}
++	/* Subscribe last, after runtime PM, children and notifiers are ready.
++	 * If the initial reconciliation fails, close/drain before rollback. */
++	ret = t380_otg_vbus_start(motg);
++	if (ret) {
++		device_remove_file(&pdev->dev, &dev_attr_t380_usb_request);
++		unregister_pm_notifier(&motg->pm_notify);
++		if (pdev->dev.of_node)
++			msm_otg_setup_devices(pdev, pdata->mode, false);
++		pm_relax(&pdev->dev);
++		goto remove_cdev;
++	}
+ 	return 0;
+ 
+ remove_cdev:
+@@ -4951,9 +5184,16 @@ static int msm_otg_remove(struct platform_device *pdev)
+ 	struct usb_phy *phy = &motg->phy;
+ 	int cnt = 0;
+ 
++	/* Close/drain the blocking extcon subscriber before any USB workqueue,
++	 * PHY or motg teardown, even when the inherited busy guard returns. */
++	t380_otg_vbus_close(motg);
+ 	if (phy->otg->host || phy->otg->gadget)
+ 		return -EBUSY;
+ 
++	/* Drain active sysfs readers before freeing motg. */
++	device_remove_file(&pdev->dev, &dev_attr_t380_usb_request);
++	if (of_find_property(pdev->dev.of_node, "samsung,charge-inhibit", NULL))
++		t380_source_disconnect();
+ 	unregister_pm_notifier(&motg->pm_notify);
+ 
+ 	if (pdev->dev.of_node)
+@@ -5037,6 +5277,7 @@ static void msm_otg_shutdown(struct platform_device *pdev)
+ 	struct msm_otg *motg = platform_get_drvdata(pdev);
+ 
+ 	dev_dbg(&pdev->dev, "OTG shutdown\n");
++	t380_otg_vbus_close(motg);
+ 	msm_hsusb_vbus_power(motg, 0);
+ }
+ 
+@@ -5093,6 +5334,8 @@ static int msm_otg_pm_suspend(struct device *dev)
+ 		dev_err(dev, "Abort PM suspend!! (USB is outside LPM)\n");
+ 		return -EBUSY;
+ 	}
++	if (of_find_property(dev->of_node, "samsung,charge-inhibit", NULL))
++		t380_source_system_suspend(true);
+ 	atomic_set(&motg->pm_suspended, 1);
+ 
+ 	return 0;
+diff --git a/drivers/video/fbdev/msm/Makefile b/drivers/video/fbdev/msm/Makefile
+index 37f193e23..c4a0fe6a6 100644
+--- a/drivers/video/fbdev/msm/Makefile
++++ b/drivers/video/fbdev/msm/Makefile
+@@ -36,7 +36,7 @@ obj-$(CONFIG_DEBUG_FS) += mdss_debug_frc.o
+ endif
+ 
+ mdss-dsi-objs := mdss_dsi.o mdss_dsi_host.o mdss_dsi_cmd.o mdss_dsi_status.o
+-mdss-dsi-objs += mdss_dsi_panel.o
++mdss-dsi-objs += mdss_dsi_panel.o mdss_samsung_t380_panel.o
+ mdss-dsi-objs += msm_mdss_io_8974.o
+ mdss-dsi-objs += mdss_dsi_phy.o
+ mdss-dsi-objs += mdss_dsi_phy_v3.o
+diff --git a/drivers/video/fbdev/msm/mdss_dsi_panel.c b/drivers/video/fbdev/msm/mdss_dsi_panel.c
+index cf23b5411..9ac998b3e 100644
+--- a/drivers/video/fbdev/msm/mdss_dsi_panel.c
++++ b/drivers/video/fbdev/msm/mdss_dsi_panel.c
+@@ -27,6 +27,7 @@
+ #endif
+ 
+ #include "mdss_dsi.h"
++#include "mdss_samsung_t380_panel.h"
+ #include "mdss_dba_utils.h"
+ #include "mdss_debug.h"
+ 
+@@ -257,6 +258,9 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
+ 			return;
+ 	}
+ 
++	if (mdss_samsung_t380_backlight(ctrl, level))
++		return;
++
+ 	pr_debug("%s: level=%d\n", __func__, level);
+ 
+ 	led_pwm1[1] = (unsigned char)level;
+@@ -687,6 +691,7 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
+ 			pr_debug("%s: Reset panel done\n", __func__);
+ 		}
+ 	} else {
++		mdss_samsung_t380_pre_reset_off(ctrl_pdata);
+ 		if (gpio_is_valid(ctrl_pdata->avdd_en_gpio)) {
+ 			if (ctrl_pdata->avdd_en_gpio_invert)
+ 				gpio_set_value((ctrl_pdata->avdd_en_gpio), 1);
+diff --git a/drivers/video/fbdev/msm/mdss_fb.c b/drivers/video/fbdev/msm/mdss_fb.c
+index fe3201c49..b3584e2bb 100644
+--- a/drivers/video/fbdev/msm/mdss_fb.c
++++ b/drivers/video/fbdev/msm/mdss_fb.c
+@@ -17,6 +17,8 @@
+ #include <linux/dma-mapping.h>
+ #include <linux/dma-buf.h>
+ #include <linux/fb.h>
++#include <linux/t380_display_admission.h>
++#include <linux/ktime.h>
+ #include <linux/init.h>
+ #include <linux/ioport.h>
+ #include <linux/kernel.h>
+@@ -90,6 +92,97 @@ static u32 mdss_fb_pseudo_palette[16] = {
+ static struct msm_mdp_interface *mdp_instance;
+ 
+ static int mdss_fb_register(struct msm_fb_data_type *mfd);
++#ifdef CONFIG_T380_HOUSEHOLD_CHARGE_DEV
++/* Observation only. Serialize initial charger LOW with actual primary transitions.
++ * Lock order: existing MDSS locks -> display guard; charger control -> guard ->
++ * GPIO owner. No MDSS callback acquires a charger lock. */
++static DEFINE_MUTEX(t380_display_mutex);
++static struct t380_display_snapshot t380_display_state;
++static bool t380_display_registered, t380_display_exhausted, t380_display_suspended;
++static void t380_display_invalidate_locked(void)
++{
++ t380_display_state.known_off = false;
++ t380_display_state.off_completed_ms = 0;
++ if (t380_display_state.epoch == (u64)~0ULL)
++  t380_display_exhausted = true;
++ else
++  ++t380_display_state.epoch;
++}
++void t380_display_snapshot(struct t380_display_snapshot *out)
++{
++ mutex_lock(&t380_display_mutex);
++ *out = t380_display_state;
++ mutex_unlock(&t380_display_mutex);
++}
++EXPORT_SYMBOL_GPL(t380_display_snapshot);
++int t380_display_guard_enter(u64 epoch)
++{
++ mutex_lock(&t380_display_mutex);
++ if (!epoch || !t380_display_registered || t380_display_exhausted ||
++     t380_display_suspended ||
++     !t380_display_state.known_off || t380_display_state.epoch != epoch) {
++  mutex_unlock(&t380_display_mutex);
++  return -EAGAIN;
++ }
++ return 0;
++}
++EXPORT_SYMBOL_GPL(t380_display_guard_enter);
++void t380_display_guard_leave(void)
++{
++ mutex_unlock(&t380_display_mutex);
++}
++EXPORT_SYMBOL_GPL(t380_display_guard_leave);
++static bool t380_mdss_display_enter(struct msm_fb_data_type *mfd)
++{
++ if (!mfd || mfd->index != 0) return false;
++ mutex_lock(&t380_display_mutex);
++ t380_display_invalidate_locked();
++ return true;
++}
++static void t380_mdss_display_leave(struct msm_fb_data_type *mfd,
++                                   bool held, bool actual_off, int result)
++{
++ if (!held) return;
++ if (actual_off && !result && t380_display_registered &&
++     !t380_display_suspended &&
++     !t380_display_exhausted && mfd->key == MFD_KEY &&
++     mfd->fbi && mfd->fbi->node == 0 &&
++     mfd->op_enable && !mfd->shutdown_pending &&
++     mfd->dcm_state == DCM_UNINIT &&
++     mdss_panel_is_power_off(mfd->panel_power_state)) {
++  t380_display_state.off_completed_ms =
++   ktime_to_ms(ktime_get_boottime());
++  t380_display_state.known_off = true;
++ }
++ mutex_unlock(&t380_display_mutex);
++}
++static void t380_mdss_display_pm(struct msm_fb_data_type *mfd, bool suspended)
++{
++ bool held = t380_mdss_display_enter(mfd);
++ if (!held) return;
++ t380_display_suspended = suspended;
++ mutex_unlock(&t380_display_mutex);
++}
++static void t380_mdss_display_lifecycle(struct msm_fb_data_type *mfd,
++                                       bool registered)
++{
++ bool held = t380_mdss_display_enter(mfd);
++ if (!held) return;
++ t380_display_registered = registered && mfd->key == MFD_KEY &&
++  mfd->fbi && mfd->fbi->node == 0;
++ t380_display_suspended = false;
++ mutex_unlock(&t380_display_mutex);
++}
++#else
++static bool t380_mdss_display_enter(struct msm_fb_data_type *mfd)
++{ return false; }
++static void t380_mdss_display_leave(struct msm_fb_data_type *mfd,
++                                   bool held, bool actual_off, int result) { }
++static void t380_mdss_display_pm(struct msm_fb_data_type *mfd, bool suspended) { }
++static void t380_mdss_display_lifecycle(struct msm_fb_data_type *mfd,
++                                       bool registered) { }
++#endif
++
+ static int mdss_fb_open(struct fb_info *info, int user);
+ static int mdss_fb_release(struct fb_info *info, int user);
+ static int mdss_fb_release_all(struct fb_info *info, bool release_all);
+@@ -1255,6 +1348,7 @@ static void mdss_fb_shutdown(struct platform_device *pdev)
+ {
+ 	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
+ 
++	t380_mdss_display_lifecycle(mfd, false);
+ 	mfd->shutdown_pending = true;
+ 
+ 	/* wake up threads waiting on idle or kickoff queues */
+@@ -1717,6 +1811,7 @@ static int mdss_fb_remove(struct platform_device *pdev)
+ 	if (!mfd)
+ 		return -ENODEV;
+ 
++	t380_mdss_display_lifecycle(mfd, false);
+ 	mdss_fb_remove_sysfs(mfd);
+ 
+ 	pm_runtime_disable(mfd->fbi->dev);
+@@ -1766,7 +1861,7 @@ static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
+ 	return ret;
+ }
+ 
+-static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
++static int __t380_mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
+ {
+ 	int ret = 0;
+ 
+@@ -1813,7 +1908,17 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
+ 	return ret;
+ }
+ 
+-static int mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
++static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
++{
++ int ret;
++ t380_mdss_display_pm(mfd, true);
++ ret = __t380_mdss_fb_suspend_sub(mfd);
++ if (ret) t380_mdss_display_pm(mfd, false);
++ return ret;
++}
++
++
++static int __t380_mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
+ {
+ 	int ret = 0;
+ 
+@@ -1864,6 +1969,15 @@ static int mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
+ 	return ret;
+ }
+ 
++static int mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
++{
++ int ret = __t380_mdss_fb_resume_sub(mfd);
++ /* Resume, including a failed resume, leaves UNKNOWN until real normal OFF. */
++ t380_mdss_display_pm(mfd, false);
++ return ret;
++}
++
++
+ #if defined(CONFIG_PM) && !defined(CONFIG_PM_SLEEP)
+ static int mdss_fb_suspend(struct platform_device *pdev, pm_message_t state)
+ {
+@@ -2141,7 +2255,7 @@ static void mdss_panel_validate_debugfs_info(struct msm_fb_data_type *mfd)
+ 	}
+ }
+ 
+-static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
++static int __t380_mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
+ 	int req_power_state)
+ {
+ 	int ret = 0;
+@@ -2198,7 +2312,19 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
+ 	return ret;
+ }
+ 
+-static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
++static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
++                               int req_power_state)
++{
++ bool held = t380_mdss_display_enter(mfd);
++ bool actual_off = mfd && mdss_fb_is_power_on(mfd) && mfd->mdp.off_fnc &&
++  mfd->panel_power_state != req_power_state &&
++  mdss_panel_is_power_off(req_power_state);
++ int ret = __t380_mdss_fb_blank_blank(mfd, req_power_state);
++ t380_mdss_display_leave(mfd, held, actual_off, ret);
++ return ret;
++}
++
++static int __t380_mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
+ {
+ 	int ret = 0;
+ 	int cur_power_state;
+@@ -2286,6 +2412,15 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
+ 	return ret;
+ }
+ 
++static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
++{
++ bool held = t380_mdss_display_enter(mfd);
++ /* debugfs off_fnc is inside this original unblank body: no nested guard. */
++ int ret = __t380_mdss_fb_blank_unblank(mfd);
++ t380_mdss_display_leave(mfd, held, false, ret);
++ return ret;
++}
++
+ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
+ 			     int op_enable)
+ {
+@@ -2294,6 +2429,11 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
+ 	int cur_power_state, req_power_state = MDSS_PANEL_POWER_OFF;
+ 	char trace_buffer[32];
+ 
++ /* Entry rejects stale proof even for unsupported/no-op early returns. */
++ {
++  bool held = t380_mdss_display_enter(mfd);
++  t380_mdss_display_leave(mfd, held, false, 0);
++ }
+ 	if (!mfd || !op_enable)
+ 		return -EPERM;
+ 
+@@ -2393,6 +2533,9 @@ static int mdss_fb_blank(int blank_mode, struct fb_info *info)
+ 	mutex_lock(&mfd->mdss_sysfs_lock);
+ 
+ 	if (mfd->op_enable == 0) {
++		/* Deferred desired state is not completed physical OFF. */
++		bool held = t380_mdss_display_enter(mfd);
++		t380_mdss_display_leave(mfd, held, false, 0);
+ 		if (blank_mode == FB_BLANK_UNBLANK)
+ 			mfd->suspend.panel_power_state = MDSS_PANEL_POWER_ON;
+ 		else if (blank_mode == BLANK_FLAG_ULP)
+@@ -3034,12 +3177,14 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
+ 		pr_err("fb_alloc_cmap() failed!\n");
+ 
+ 	if (register_framebuffer(fbi) < 0) {
++		t380_mdss_display_lifecycle(mfd, false);
+ 		fb_dealloc_cmap(&fbi->cmap);
+ 
+ 		mfd->op_enable = false;
+ 		return -EPERM;
+ 	}
+ 
++	t380_mdss_display_lifecycle(mfd, true);
+ 	snprintf(panel_name, ARRAY_SIZE(panel_name), "mdss_panel_fb%d",
+ 		mfd->index);
+ 	mdss_panel_debugfs_init(panel_info, panel_name);
+@@ -4386,7 +4531,7 @@ static int mdss_fb_set_par(struct fb_info *info)
+ 	return ret;
+ }
+ 
+-int mdss_fb_dcm(struct msm_fb_data_type *mfd, int req_state)
++static int __t380_mdss_fb_dcm(struct msm_fb_data_type *mfd, int req_state)
+ {
+ 	int ret = 0;
+ 
+@@ -4456,6 +4601,15 @@ int mdss_fb_dcm(struct msm_fb_data_type *mfd, int req_state)
+ 	return ret;
+ }
+ 
++int mdss_fb_dcm(struct msm_fb_data_type *mfd, int req_state)
++{
++ bool held = t380_mdss_display_enter(mfd);
++ int ret = __t380_mdss_fb_dcm(mfd, req_state);
++ /* DCM metadata may say OFF without normal off success; never credit it. */
++ t380_mdss_display_leave(mfd, held, false, ret);
++ return ret;
++}
++
+ static int mdss_fb_cursor(struct fb_info *info, void __user *p)
+ {
+ 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+diff --git a/include/linux/page-flags.h b/include/linux/page-flags.h
+index 260c4421d..42a90d296 100644
+--- a/include/linux/page-flags.h
++++ b/include/linux/page-flags.h
+@@ -101,6 +101,9 @@ enum pageflags {
+ #if defined(CONFIG_IDLE_PAGE_TRACKING) && defined(CONFIG_64BIT)
+ 	PG_young,
+ 	PG_idle,
++#endif
++#ifdef CONFIG_MEMCG_KMEM
++	PG_kmemcg,		/* Non-slab kernel memory charged to a memcg */
+ #endif
+ 	__NR_PAGEFLAGS,
+ 
+@@ -252,6 +255,9 @@ static inline int Page##uname(const struct page *page) { return 0; }
+ #define SETPAGEFLAG_NOOP(uname)						\
+ static inline void SetPage##uname(struct page *page) {  }
+ 
++#define __SETPAGEFLAG_NOOP(uname)						\
++static inline void __SetPage##uname(struct page *page) {  }
++
+ #define CLEARPAGEFLAG_NOOP(uname)					\
+ static inline void ClearPage##uname(struct page *page) {  }
+ 
+@@ -389,6 +395,19 @@ TESTCLEARFLAG(Young, young, PF_ANY)
+ PAGEFLAG(Idle, idle, PF_ANY)
+ #endif
+ 
++/*
++ * Accounted kernel pages can be mapped to userspace (e.g. BPF ringbufs).
++ * Keep the charge marker out of page_type, which aliases _mapcount.
++ * The page allocator sets it before publication and clears it on free.
++ */
++#ifdef CONFIG_MEMCG_KMEM
++__PAGEFLAG(Kmemcg, kmemcg, PF_NO_TAIL)
++#else
++TESTPAGEFLAG_FALSE(Kmemcg)
++__SETPAGEFLAG_NOOP(Kmemcg)
++__CLEARPAGEFLAG_NOOP(Kmemcg)
++#endif
++
+ /*
+  * On an anonymous page mapped into a user virtual memory area,
+  * page->mapping points to its anon_vma, not to a struct address_space;
+@@ -678,7 +697,6 @@ PAGEFLAG_FALSE(DoubleMap)
+ /* Reserve		0x0000007f to catch underflows of page_mapcount */
+ #define PG_buddy	0x00000080
+ #define PG_balloon	0x00000100
+-#define PG_kmemcg	0x00000200
+ #define PG_table	0x00000400
+ 
+ #define PageType(page, flag)						\
+@@ -712,12 +730,6 @@ PAGE_TYPE_OPS(Buddy, buddy)
+  */
+ PAGE_TYPE_OPS(Balloon, balloon)
+ 
+-/*
+- * If kmemcg is enabled, the buddy allocator will set PageKmemcg() on
+- * pages allocated with __GFP_ACCOUNT. It gets cleared on page free.
+- */
+-PAGE_TYPE_OPS(Kmemcg, kmemcg)
+-
+ /*
+  * Marks pages in use as page tables.
+  */
+@@ -761,6 +773,12 @@ static inline void ClearPageSlabPfmemalloc(struct page *page)
+ #define __PG_MLOCKED		0
+ #endif
+ 
++#ifdef CONFIG_MEMCG_KMEM
++#define __PG_KMEMCG		(1UL << PG_kmemcg)
++#else
++#define __PG_KMEMCG		0
++#endif
++
+ /*
+  * Flags checked when a page is freed.  Pages being freed should not have
+  * these flags set.  It they are, there is a problem.
+@@ -770,7 +788,7 @@ static inline void ClearPageSlabPfmemalloc(struct page *page)
+ 	 1UL << PG_private	| 1UL << PG_private_2	|	\
+ 	 1UL << PG_writeback	| 1UL << PG_reserved	|	\
+ 	 1UL << PG_slab		| 1UL << PG_active 	|	\
+-	 1UL << PG_unevictable	| __PG_MLOCKED)
++	 1UL << PG_unevictable	| __PG_MLOCKED | __PG_KMEMCG)
+ 
+ /*
+  * Flags checked when a page is prepped for return by the page allocator.
+diff --git a/include/linux/userfaultfd_k.h b/include/linux/userfaultfd_k.h
+index 6e5ad8107..4aa3747da 100644
+--- a/include/linux/userfaultfd_k.h
++++ b/include/linux/userfaultfd_k.h
+@@ -55,7 +55,8 @@ enum mcopy_atomic_mode {
+ extern int mfill_atomic_install_pte(struct mm_struct *dst_mm, pmd_t *dst_pmd,
+ 				    struct vm_area_struct *dst_vma,
+ 				    unsigned long dst_addr, struct page *page,
+-				    bool newly_allocated);
++				    bool newly_allocated,
++				    struct mem_cgroup *memcg);
+ 
+ extern ssize_t mcopy_atomic(struct mm_struct *dst_mm, unsigned long dst_start,
+ 			    unsigned long src_start, unsigned long len,
+diff --git a/include/trace/events/mmflags.h b/include/trace/events/mmflags.h
+index f9f8a32b8..3a2d3a455 100644
+--- a/include/trace/events/mmflags.h
++++ b/include/trace/events/mmflags.h
+@@ -79,6 +79,12 @@
+ #define IF_HAVE_PG_IDLE(flag,string)
+ #endif
+ 
++#ifdef CONFIG_MEMCG_KMEM
++#define IF_HAVE_PG_KMEMCG(flag,string) ,{1UL << flag, string}
++#else
++#define IF_HAVE_PG_KMEMCG(flag,string)
++#endif
++
+ #define __def_pageflag_names						\
+ 	{1UL << PG_locked,		"locked"	},		\
+ 	{1UL << PG_waiters,		"waiters"	},		\
+@@ -105,7 +111,8 @@ IF_HAVE_PG_MLOCK(PG_mlocked,		"mlocked"	)		\
+ IF_HAVE_PG_UNCACHED(PG_uncached,	"uncached"	)		\
+ IF_HAVE_PG_HWPOISON(PG_hwpoison,	"hwpoison"	)		\
+ IF_HAVE_PG_IDLE(PG_young,		"young"		)		\
+-IF_HAVE_PG_IDLE(PG_idle,		"idle"		)
++IF_HAVE_PG_IDLE(PG_idle,		"idle"		)		\
++IF_HAVE_PG_KMEMCG(PG_kmemcg,	"kmemcg"		)
+ 
+ #define show_page_flags(flags)						\
+ 	(flags) ? __print_flags(flags, "|",				\
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 42488352e..d007638b7 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -2519,17 +2519,19 @@ noinline static int copy_clone_args_from_user(struct kernel_clone_args *kargs,
+ 					      struct clone_args __user *uargs,
+ 					      size_t size)
+ {
++	int err;
+ 	struct clone_args args;
+ 	pid_t *kset_tid = kargs->set_tid;
+ 
+ 	if (unlikely(size > PAGE_SIZE))
+ 		return -E2BIG;
+ 
+-	if (unlikely(size < sizeof(struct clone_args)))
++	if (unlikely(size < CLONE_ARGS_SIZE_VER0))
+ 		return -EINVAL;
+ 
+-	if (unlikely(!access_ok(VERIFY_READ, uargs, size)))
+-		return -EFAULT;
++	err = copy_struct_from_user(&args, sizeof(args), uargs, size);
++	if (err)
++		return err;
+ 
+ 	if (unlikely(args.set_tid_size > MAX_PID_NS_LEVEL))
+ 		return -EINVAL;
+@@ -2570,7 +2572,26 @@ noinline static int copy_clone_args_from_user(struct kernel_clone_args *kargs,
+ 	return 0;
+ }
+ 
+-static bool clone3_args_valid(const struct kernel_clone_args *kargs)
++static inline bool clone3_stack_valid(struct kernel_clone_args *kargs)
++{
++	if (kargs->stack == 0) {
++		if (kargs->stack_size > 0)
++			return false;
++	} else {
++		if (kargs->stack_size == 0)
++			return false;
++		if (!access_ok(VERIFY_WRITE, (void __user *)kargs->stack,
++			       kargs->stack_size))
++			return false;
++#if !defined(CONFIG_STACK_GROWSUP) && !defined(CONFIG_IA64)
++		kargs->stack += kargs->stack_size;
++#endif
++	}
++
++	return true;
++}
++
++static bool clone3_args_valid(struct kernel_clone_args *kargs)
+ {
+ 	/* Verify that no unknown flags are passed along. */
+ 	if (kargs->flags & ~(CLONE_LEGACY_FLAGS | CLONE_CLEAR_SIGHAND))
+@@ -2591,6 +2612,9 @@ static bool clone3_args_valid(const struct kernel_clone_args *kargs)
+ 	    kargs->exit_signal)
+ 		return false;
+ 
++	if (!clone3_stack_valid(kargs))
++		return false;
++
+ 	return true;
+ }
+ 
+diff --git a/mm/shmem.c b/mm/shmem.c
+index 2022a921e..94e6993f3 100644
+--- a/mm/shmem.c
++++ b/mm/shmem.c
+@@ -2419,7 +2419,7 @@ int shmem_mfill_atomic_pte(struct mm_struct *dst_mm,
+ 	mem_cgroup_commit_charge(page, memcg, false, false);
+ 
+ 	ret = mfill_atomic_install_pte(dst_mm, dst_pmd, dst_vma, dst_addr,
+-				       page, true);
++				       page, true, NULL);
+ 	if (ret)
+ 		goto out_delete_from_cache;
+ 
+@@ -2434,6 +2434,8 @@ int shmem_mfill_atomic_pte(struct mm_struct *dst_mm,
+ 	return 0;
+ out_delete_from_cache:
+ 	delete_from_page_cache(page);
++	/* The committed charge is released by the final put_page(). */
++	goto out_release;
+ out_release_uncharge:
+ 	mem_cgroup_cancel_charge(page, memcg, false);
+ out_release:
+diff --git a/mm/userfaultfd.c b/mm/userfaultfd.c
+index c15c41c50..dc430ef8a 100644
+--- a/mm/userfaultfd.c
++++ b/mm/userfaultfd.c
+@@ -29,7 +29,8 @@
+ int mfill_atomic_install_pte(struct mm_struct *dst_mm, pmd_t *dst_pmd,
+ 			     struct vm_area_struct *dst_vma,
+ 			     unsigned long dst_addr, struct page *page,
+-			     bool newly_allocated)
++			     bool newly_allocated,
++			     struct mem_cgroup *memcg)
+ {
+ 	int ret;
+ 	pte_t _dst_pte, *dst_pte;
+@@ -66,8 +67,11 @@ int mfill_atomic_install_pte(struct mm_struct *dst_mm, pmd_t *dst_pmd,
+ 
+ 	if (page_in_cache)
+ 		page_add_file_rmap(page, false);
+-	else
++	else {
+ 		page_add_new_anon_rmap(page, dst_vma, dst_addr, false);
++		/* Commit under the PTL before LRU insertion or PTE publication. */
++		mem_cgroup_commit_charge(page, memcg, false, false);
++	}
+ 
+ 	/*
+ 	 * Must happen after rmap, as mm_counter() checks mapping (via
+@@ -138,12 +142,11 @@ static int mcopy_atomic_pte(struct mm_struct *dst_mm,
+ 		goto out_release;
+ 
+ 	ret = mfill_atomic_install_pte(dst_mm, dst_pmd, dst_vma, dst_addr,
+-				       page, true);
++				       page, true, memcg);
+ 	if (ret) {
+ 		mem_cgroup_cancel_charge(page, memcg, false);
+ 		goto out_release;
+ 	}
+-	mem_cgroup_commit_charge(page, memcg, false, false);
+ out:
+ 	return ret;
+ out_release:
+@@ -206,7 +209,7 @@ static int mcontinue_atomic_pte(struct mm_struct *dst_mm,
+ 	}
+ 
+ 	ret = mfill_atomic_install_pte(dst_mm, dst_pmd, dst_vma, dst_addr,
+-				       page, false);
++				       page, false, NULL);
+ 	if (ret)
+ 		goto out_release;
+ 
+diff --git a/net/wireless/sysfs.c b/net/wireless/sysfs.c
+index 6ab32f6a1..f5f987efa 100644
+--- a/net/wireless/sysfs.c
++++ b/net/wireless/sysfs.c
+@@ -10,6 +10,7 @@
+ 
+ #include <linux/device.h>
+ #include <linux/module.h>
++#include <linux/printk.h>
+ #include <linux/netdevice.h>
+ #include <linux/nl80211.h>
+ #include <linux/rtnetlink.h>
+@@ -107,6 +108,8 @@ static int wiphy_suspend(struct device *dev)
+ 	rtnl_lock();
+ 	if (rdev->wiphy.registered) {
+ 		if (!rdev->wiphy.wowlan_config) {
++			pr_warn_ratelimited("t380 wlan suspend: cfg80211 no WoWLAN; disconnecting %s\n",
++					    wiphy_name(&rdev->wiphy));
+ 			cfg80211_leave_all(rdev);
+ 			cfg80211_process_rdev_events(rdev);
+ 		}

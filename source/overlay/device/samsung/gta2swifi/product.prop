@@ -1,0 +1,3 @@
+# Capability-level override from the matching backported4.19 donor. Runtime
+# BPF validation is still required; this is not a security patch claim.
+ro.bpf.kver_override=5.10.239

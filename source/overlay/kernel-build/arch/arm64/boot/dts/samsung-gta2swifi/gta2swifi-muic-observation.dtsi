@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* Diagnostic019: enabled, guarded read-only MUIC observation.
+ * Stock Rev05 source: MUIC SDA16/SCL17, 0x25, IRQ28 and AFC support disabled.
+ * Deliberately omit IRQ28, GPIO40 switch, wakeup and all autoactions.
+ * Enabling this bus is a coordinator-owned reviewed diagnostic change: an
+ * i2c-gpio read still toggles SDA/SCL and is not electrically passive.
+ */
+/ {
+    samsung_muic_observation_i2c: i2c-muic-observation {
+        compatible = "i2c-gpio";
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&samsung_muic_observation_default>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        sda-gpios = <&tlmm 16 GPIO_ACTIVE_HIGH>;
+        scl-gpios = <&tlmm 17 GPIO_ACTIVE_HIGH>;
+        i2c-gpio,delay-us = <2>;
+        policy_muic: muic@25 {
+            compatible = "samsung,t380-sm5703-muic-observation";
+            reg = <0x25>;
+            samsung,charge-inhibit = <&charge_inhibit>;
+        };
+    };
+};
+&tlmm {
+    samsung_muic_observation_default: muic-observation-default {
+        pins = "gpio16", "gpio17";
+        function = "gpio";
+        drive-strength = <2>;
+        bias-disable;
+    };
+};

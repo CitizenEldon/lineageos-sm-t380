@@ -1,0 +1,6 @@
+# Samsung bootdevice from captured Rev05 DTS. Static system-as-root, with
+# vendor/product/system_ext nested in the one SYSTEM image. DATA is an explicit
+# disposable clean ext4 installation with explicit ordinary FBEv2.
+# No autoformat; coordinator prepares DATA. No cache/EFS/identity mounts.
+/dev/block/platform/soc/7824900.sdhci/by-name/system /system ext4 ro,barrier=1 wait,first_stage_mount
+/dev/block/platform/soc/7824900.sdhci/by-name/userdata /data ext4 noatime,nosuid,nodev,noauto_da_alloc,discard wait,check,latemount,fileencryption=aes-256-xts:aes-256-cts:v2

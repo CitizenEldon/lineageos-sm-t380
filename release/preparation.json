@@ -1,0 +1,44 @@
+{
+  "preparedUtc": "2026-10-29T20:42:13.746196+00:00",
+  "status": "LOCAL_RELEASE_PREPARED",
+  "repositoryName": "lineageos-sm-t380",
+  "host": "Apple M2 / macOS",
+  "pythonVersion": "3.15.2",
+  "powerShellVersion": "7.6.9",
+  "tests": {
+    "pythonTestMethods": 7,
+    "originalInstallerCases": 23,
+    "publicInstallerCases": 22,
+    "allPassed": true
+  },
+  "originalSignatureAndImagesVerified": true,
+  "publicInstallerOfflineAuthenticationPassed": true,
+  "completeKernelSourceFingerprintVerified": true,
+  "privacy": {
+    "status": "PASS",
+    "knownPrivateMarkerMatches": 0,
+    "signedArchiveOwnerMetadataRemoved": true,
+    "privateSigningMaterialCopied": false
+  },
+  "deviceActions": false,
+  "newOSBuildOrSigning": false,
+  "privateArchiveModified": false,
+  "gitHubUploadPerformed": false,
+  "redistributionPermission": "assumed for local preparation; no new grant obtained",
+  "publicVersion": "0.01",
+  "deviceStatusUpdate": {
+    "date": "2026-10-29",
+    "chargingAndSuspend": "working in everyday use",
+    "basis": "owner report"
+  },
+  "remainingPublicationWork": [
+    "matching complete source provenance for custom rescue recovery",
+    "stock-to-recovery/DATA/rollback procedure",
+    "Windows/Linux CI execution"
+  ],
+  "documentationReview": {
+    "skill": "humanize-writing",
+    "date": "2026-10-29",
+    "publicVersion": "0.01"
+  }
+}

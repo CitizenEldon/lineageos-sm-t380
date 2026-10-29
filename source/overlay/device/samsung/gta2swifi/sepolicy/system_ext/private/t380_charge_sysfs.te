@@ -1,0 +1,3 @@
+# Read-only kernel diagnostics for authenticated shell. No app charging control.
+type sysfs_t380_charge_observe, fs_type, sysfs_type;
+allow shell sysfs_t380_charge_observe:file { getattr open read };

@@ -1,0 +1,209 @@
+{
+  "008": {
+    "boot_sha256": "e6ebfeafd591bf26c591e7711afb5fde6bb003ebb0134be7dcea7403dd54cdd9",
+    "charge_inhibited": true,
+    "dt_sha256": "1a6b4f3da519fd97eb15f4c7c22922274cb4d60291cd2c15c67a775014a63cbf",
+    "kernel_sha256": "4c07107ebc415b24ccb317f1ae538fbab7e293ca3929c1b3945e8ce91591035d"
+  },
+  "012": {
+    "boot_sha256": "771a2bad359a9a0caa19dc6e4d3c953b9ff2bc5dcde6e4ed832de078db398da9",
+    "charge_inhibited": true,
+    "dt_sha256": "0352a5909553c185a7c072a34825b4260216c1e100657c01120343377224f442",
+    "kernel_sha256": "23e3646a8bfc2be334e16244befd7e13d4b3893515824b870c49746242794014"
+  },
+  "014": {
+    "boot_sha256": "06e54c97bc54cb76406835644892c28578e27b978a618444dc60ea7b5d572e69",
+    "charge_inhibited": true,
+    "dt_sha256": "348ea4b67d069566826913b9ef5f65ba0fa9898b7181a2aad2dd057673689161",
+    "kernel_sha256": "e74d8b76c49423e4146eb0ce95f0a21d3febd9ee8ed1964af87a888d45037448"
+  },
+  "020": {
+    "boot_sha256": "8f46e654053e85b05cde8e467ce4d5e6dd6e208b90a6817fb2d54611c171cb19",
+    "charge_inhibited": true,
+    "dt_sha256": "0f0e8c93d338615c2385c3db1c4186ff34d40f2fdeef7f8cd89ca718b432bac5",
+    "kernel_sha256": "9770cbb5f259cda57ea3ddd1caaf79a297f7e85f8701728cd5ac9b83fd996f13"
+  },
+  "023": {
+    "boot_sha256": "76c110b713417ab72bbab4387a49c5988c6ee4ad973625ddb570301e61e0fced",
+    "charge_inhibited": true,
+    "dt_sha256": "0f0e8c93d338615c2385c3db1c4186ff34d40f2fdeef7f8cd89ca718b432bac5",
+    "kernel_sha256": "0301b6c83e3bd8d43858515531dd15005a89d026d5da52dd054d5d53edd14fff"
+  },
+  "024": {
+    "boot_sha256": "083410870c6ff6c7e04e33d7a1258fd692d90c41cc41a2d95a8ff611d22e9fd9",
+    "charge_inhibited": true,
+    "dt_sha256": "0f0e8c93d338615c2385c3db1c4186ff34d40f2fdeef7f8cd89ca718b432bac5",
+    "kernel_sha256": "7501dc38babcde3330071afdf8879c9028cf65a12695e76ec2ff26907b70ae81"
+  },
+  "025": {
+    "boot_sha256": "3c1d2c95f247e3989056a55b74b7957ae187fff89ee03fce33b47ebb2c0c8115",
+    "charge_inhibited": true,
+    "dt_sha256": "0f0e8c93d338615c2385c3db1c4186ff34d40f2fdeef7f8cd89ca718b432bac5",
+    "kernel_sha256": "7b8f687471d38cbbd7d5cca03d9b0f360a6c533e582d3bf078e82811affd8a04"
+  },
+  "026": {
+    "boot_sha256": "0a525223d20877395d62361454941c40c8fae73f94e97f23ba57fb3a2c365ed1",
+    "charge_inhibited": true,
+    "dt_sha256": "0f0e8c93d338615c2385c3db1c4186ff34d40f2fdeef7f8cd89ca718b432bac5",
+    "kernel_sha256": "61c63cc637141809de93270bd4f91c6990e0f3f8b34a96e34d44974c16f9d188"
+  },
+  "028": {
+    "boot_sha256": "5094f565dc21d5f90b35372c6393ef9714ef7e66c2f099a6083e5d9bbf576318",
+    "charge_inhibited": true,
+    "dt_sha256": "25b200d47937cdb092d6b1422f094c79afa86665421b7adfd7710f9436bee337",
+    "kernel_sha256": "b9d4ab92d95b51f021138254a2af14f210c2e542dc846fd85af55e07447f0672"
+  },
+  "051": {
+    "boot_sha256": "cb342d47277e3298a4fbb198de6af944208a4b3748f13937ec1100ce57bb7eae",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "d9a32e87263f68ec15fcb1a2ef60a22c7379506d96c726123f1dbfc0463440dd"
+  },
+  "052": {
+    "boot_sha256": "9cd8a3b46f198eb205169f2ae9d13edf801f6a5759d47c16a8de10746cdd3930",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "82dbee5c951739ca18230b68182ab5ec939e8972c1932352288bb3f16cd8471e"
+  },
+  "053": {
+    "boot_sha256": "fb937b7549f37b25cc6f803de1898418aa3a5660a68661da7014199e0f246165",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "437faba38a36b915f8cc1193893ae33c656eaeb3a73295658736e3abf4866764"
+  },
+  "054": {
+    "boot_sha256": "17396a4c09b5dbedec40d281913282aa9e64635ff4028f9b6dfb862a0a1ede08",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "ebfea05474092157cd742e8af4b10f3c3d7cd2d9a0e2259c35150e93ccd9c407"
+  },
+  "055": {
+    "boot_sha256": "657b2ac5e5c3fb2f38914cc0047db742c326655957799b61b9d0c75aa804a6a7",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "d4c1337b410b279b93f6d25a6848c2700aa26765c1948fcbba4c4e04f3f6974c"
+  },
+  "056": {
+    "boot_sha256": "222d55a81cb8629b906e6e6914edbe70aaab9d15b1f1fdbcb704cc1e67512bb7",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "aaacc7c1c99343530332d071cfe9b962e4abfb080c72f42d935fdef4406abb2e"
+  },
+  "057": {
+    "boot_sha256": "ff821b8b82c580f613ec31b4c725d4298c41ebc79fda5d0a5e2944833c463ed3",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "25e9c094b183599e310fc603d868722d375141dd0efe8cf2bcfe99b9a6bc46ed"
+  },
+  "058": {
+    "boot_sha256": "c76999d546edae0da1c96dce972a5f2dcd22f6a35fdab304d1537029bf41732c",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "ab3cb6b288290d6db575cb95c9af910cfceb27ad0ca10355e95b04cac972482b"
+  },
+  "059": {
+    "boot_sha256": "05b9953d34c15236d4cdbd73f7cd68f4af302aa919bbb43095d2a5d1a19dc6c6",
+    "charge_inhibited": true,
+    "dt_sha256": "a559e883cea6769eee1128a40f27091ae460b9234086cbdb53bc99f0d80a0b77",
+    "kernel_sha256": "bdc484233170dc812f4a298ac1fa6faf9abdb0e0cda8114f12736c3ecb71d5de"
+  },
+  "060": {
+    "boot_sha256": "9233f9273d406e7623b2dec466b4960a239b79d7c5f6a98a9663687f12a59418",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "7678a8cd228d81f1d0e29a1a513c2a8f63f8d3883cbf6e7a4843d3ffde631955"
+  },
+  "061": {
+    "boot_sha256": "b15122ed3d41a5aff9b5451ba6d6462af816224e25fe787534163e8b1023e22c",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "d0a51f2a10c214002580a02e413ec2fe5c305397c0d42f4f2da8dd146d9bf101"
+  },
+  "062": {
+    "boot_sha256": "74bd7d3f7d2129f70b417364f8cdeaaf191a922612edb5fc273b5c6333a36c8d",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "e738f68545d346976b01e6b250abae7fa799f9bee9bb51b7777acdc1551d9720"
+  },
+  "063": {
+    "boot_sha256": "1c65098644c94912c3b0e49a98a9a91b1a53e78a6070c43fae2a50e8d2e52187",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "c7fc6711a2ddb77773dbf125117b2dcaf1d8102e3562ecfc4469b4c707c51d84"
+  },
+  "064": {
+    "boot_sha256": "b7cf8846d726fdf01901767b569df18f41b7fe520899d4901efbe7722d6ebb52",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "d7cac93045cefc968b844c414e5ab917928823eba0695284adf490bd2fbeba8c"
+  },
+  "065": {
+    "boot_sha256": "5163fb5cad067445d52dc6152f69e57e9f4b0a1c04ff0852306f6354c7cb119e",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "c8a939b679752a038a3022a17e92480e124d7910323fe6f413ce8c7e39e7d63b"
+  },
+  "066": {
+    "boot_sha256": "7c6f3175747def77ac71a6fd2787fd5ccb91cddbd757f8162719838852a6abb5",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "5dd51ccb25ef5e07cb005a2447bfd9fdb3ea0b0a9fe68d636b9293e5a4edab6b"
+  },
+  "067": {
+    "boot_sha256": "798e9df77621ca548d2e870779d4eb568dfdda0b0c3176d74dae45c0b66ed6c3",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "1b9e1c62f617e200d4bd6180ab665a3ac87ebbf4ffbaac872042d161906e45f8"
+  },
+  "068": {
+    "boot_sha256": "1df936cc02e206ba027d6fdf14f194294e3baabd3a2e00d53cedebc61b4fd701",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "0514534072011587a94a68d7b46801b6bea777e067450ce2b3873ac45b6a1ba8"
+  },
+  "069": {
+    "boot_sha256": "a46448cc09ea6f50cf9e216232a7e5eec972b1367c61c84599592fb961b753ca",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "18bbd26b95f9a0135700096ad0a87c5e9a5a001e977059ad8f4daf6a3aa18047"
+  },
+  "071": {
+    "boot_sha256": "26eaba51b80c7516cd91ef44b6aeae14d25a32f95f5e207b9238727cfea083e2",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "1ce432ba4c18ff352b0c1d76eea045e976c5383deb16b1770586f011ddf3a46a"
+  },
+  "072": {
+    "boot_sha256": "c4d51dda504155d1d731421af3e2d3e60e04ce22980588b2c44e054ae34d67ce",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "2fba5fcb38b1d9594d1916f2471dff9470cc0c38f3df7ccd98a6701154835328"
+  },
+  "074": {
+    "boot_sha256": "e957a6c9c07402b2938c56a958766166d44edfd0a4fbdb3e64e4561163cb2730",
+    "charge_inhibited": true,
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "kernel_sha256": "e14c393dff462c7ede03fc3235d40cf76acf363cffd76d290dfb0a68b2c5f39d"
+  },
+  "075": {
+    "charge_inhibited": false,
+    "charging_mode": "samsung_stock_autonomous",
+    "kernel_sha256": "700da33cad7e16c354b4a26b06a29f4a8289fe3bf23b510d303ab267402f3bdd",
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "boot_sha256": "590acc4d5f5a0ef416708222dd4ef4c4a3ccc75df44d654b59be0b84cfd8e782"
+  },
+  "076": {
+    "charge_inhibited": false,
+    "charging_mode": "samsung_stock_autonomous",
+    "kernel_sha256": "f650758be5371ce92390b9d2a50d1aa566668056f96af1694db675509b1f9097",
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "boot_sha256": "5e51e66c2e77428329c05a46e751e32e1174b360cf2792ea169c4f09cc813803"
+  },
+  "077": {
+    "charge_inhibited": false,
+    "charging_mode": "samsung_stock_autonomous",
+    "kernel_sha256": "f51077855ee1989fa3caf9e56b61ebfccd852e836078bad6c2023e1c4dce3be2",
+    "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+    "boot_sha256": "e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48"
+  }
+}

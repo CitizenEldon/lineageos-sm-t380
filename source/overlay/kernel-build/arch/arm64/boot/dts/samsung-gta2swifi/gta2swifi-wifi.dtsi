@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* Include after the Rev05 board. Stock MMIO/GPIO76-80/supplies and the
+ * existing 0x8da00000/7MiB firmware reservation remain unchanged.
+ * WCNSS boot is triggered by userspace opening /dev/wcnss_wlan.
+ */
+&soc {
+    qcom,pronto@a21b000 { status = "okay"; };
+    qcom,wcnss-wlan@a000000 { status = "okay"; };
+};

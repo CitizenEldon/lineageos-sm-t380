@@ -1,0 +1,44 @@
+diff --git a/services/config/src/device_impl.cpp b/services/config/src/device_impl.cpp
+index df4731f..e063800 100644
+--- a/services/config/src/device_impl.cpp
++++ b/services/config/src/device_impl.cpp
+@@ -34,7 +34,7 @@
+ 
+ namespace DisplayConfig {
+ 
+-DeviceImpl *DeviceImpl::device_obj_ = nullptr;
++sp<DeviceImpl> DeviceImpl::device_obj_;
+ std::mutex DeviceImpl::device_lock_;
+ 
+ int DeviceImpl::CreateInstance(ClientContext *intf) {
+@@ -45,14 +45,15 @@ int DeviceImpl::CreateInstance(ClientContext *intf) {
+       return -1;
+     }
+ 
++    device_obj_->intf_ = intf;
+     android::status_t status = device_obj_->IDisplayConfig::registerAsService();
+     // Unable to start Display Config 2.0 service. Fail Init.
+     if (status != android::OK) {
+-      delete device_obj_;
++      // registerAsService temporarily holds a strong reference; keep ownership
++      // until it returns and let sp release the instance exactly once on failure.
+       device_obj_ = nullptr;
+       return -1;
+     }
+-    device_obj_->intf_ = intf;
+   }
+ 
+   return 0;
+diff --git a/services/config/src/device_impl.h b/services/config/src/device_impl.h
+index 4c22a47..39a3bb9 100644
+--- a/services/config/src/device_impl.h
++++ b/services/config/src/device_impl.h
+@@ -144,7 +144,7 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
+   std::map<uint64_t, std::shared_ptr<DeviceClientContext>> display_config_map_;
+   uint64_t client_id_ = 0;
+   std::mutex death_service_mutex_;
+-  static DeviceImpl *device_obj_;
++  static sp<DeviceImpl> device_obj_;
+   static std::mutex device_lock_;
+ };
+ 

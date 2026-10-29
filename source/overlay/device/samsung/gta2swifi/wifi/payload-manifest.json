@@ -1,0 +1,183 @@
+{
+  "boot_sha256": "e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48",
+  "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+  "files": [
+    {
+      "bytes": 6380,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/regulatory.db",
+      "sha256": "2fb33ca0074db573e05ef7dd50bb45b63c0ff98b7e852e1105ebad536fae8e6b",
+      "uid": 0
+    },
+    {
+      "bytes": 1085,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/regulatory.db.p7s",
+      "sha256": "c941c08f51c93e46722293b85631604c3740d86c3de0c75f79aef50d2e919179",
+      "uid": 0
+    },
+    {
+      "bytes": 468,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b00",
+      "sha256": "5c3820b5a958dad37dd17ada8c3a8306484d6b2757cddf420add46b0b756f005",
+      "uid": 0
+    },
+    {
+      "bytes": 37576,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b01",
+      "sha256": "5369796b2ba23ba2c06e9765f27ac76e4f61be553acd7c969bafb482c43877f9",
+      "uid": 0
+    },
+    {
+      "bytes": 13280,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b02",
+      "sha256": "6744e75ef462f26db72849c79316cdc52495616432236fe0113f0b302db20ed0",
+      "uid": 0
+    },
+    {
+      "bytes": 61440,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b04",
+      "sha256": "ebb04153ca4ba8020c066f9bd22a9f973bff0cfc95755087466c805d12657063",
+      "uid": 0
+    },
+    {
+      "bytes": 3258056,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b06",
+      "sha256": "bd8654d097e374bb6eb3cba89169f2f83c7dfd3a69c380dbd63f3403ea6a5cc4",
+      "uid": 0
+    },
+    {
+      "bytes": 56,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b09",
+      "sha256": "d4817aa5497628e7c77e6b606107042bbba3130888c5f47a375e6179be789fbb",
+      "uid": 0
+    },
+    {
+      "bytes": 47624,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b10",
+      "sha256": "0276d94dc9974c5462cd1cb960999ab89aaa85e34097609cac38937bb38c470f",
+      "uid": 0
+    },
+    {
+      "bytes": 655360,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b11",
+      "sha256": "ff6335069b6e140eb47149d847aea80bf7e2b06bd80ae9708aa382efb3ae21ee",
+      "uid": 0
+    },
+    {
+      "bytes": 143960,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.b12",
+      "sha256": "63c01ca83b38ddd54fcb7ee9a58dbb380f707738e201becb21ea14b89e25d206",
+      "uid": 0
+    },
+    {
+      "bytes": 38044,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wcnss.mdt",
+      "sha256": "f999198d5aadb0126e447bc12c79651a10a83be97a8b4f39157f486a39b044cf",
+      "uid": 0
+    },
+    {
+      "bytes": 5,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wlan/prima/grippower.info",
+      "sha256": "eb1e198b308c7aba785be3ec24308fd9b66dd4228ed6647dd096e45e3ad45418",
+      "uid": 0
+    },
+    {
+      "bytes": 11514,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wlan/prima/WCNSS_cfg.dat",
+      "sha256": "66d8aa043111f6bdce04cfb5c8d09d43f65f853506f996da357d89122e0ac1ae",
+      "uid": 0
+    },
+    {
+      "bytes": 11312,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wlan/prima/WCNSS_qcom_cfg.ini",
+      "sha256": "d9cb65f6439991db6c2ef401103727f431bcb4ba2234dd5a4f9e4839bdc8665d",
+      "uid": 0
+    },
+    {
+      "bytes": 29816,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin",
+      "sha256": "d0c4fc2a9b145045ae9f30cbfe472f8143df0050eacbc2f8ea9ab1d407f178d5",
+      "uid": 0
+    },
+    {
+      "bytes": 10419,
+      "gid": 0,
+      "label": "u:object_r:vendor_firmware_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/firmware/wlan/prima/WCNSS_wlan_dictionary.dat",
+      "sha256": "eeec95953c195b8761383e747f14394cde8f3d4e7aa237ee9bad248baf605f56",
+      "uid": 0
+    },
+    {
+      "bytes": 4536064,
+      "gid": 0,
+      "label": "u:object_r:t380_wifi_module_file:s0",
+      "mode": "0644",
+      "partition_path": "vendor/lib/modules/wlan.ko",
+      "sha256": "da7c40e1cc7cb4b89c8bdb05a17df06c1ef9c731a602b6b24f75438f0384ebba",
+      "uid": 0
+    }
+  ],
+  "ini_delta": [
+    "FastTransitionEnabled=0",
+    "FastRoamEnabled=0",
+    "EseEnabled=0"
+  ],
+  "kernel_profile": "077",
+  "kernel_sha256": "f51077855ee1989fa3caf9e56b61ebfccd852e836078bad6c2023e1c4dce3be2",
+  "module_sha256": "da7c40e1cc7cb4b89c8bdb05a17df06c1ef9c731a602b6b24f75438f0384ebba",
+  "readiness_path": "/sys/devices/platform/soc/a000000.qcom,wcnss-wlan/wcnss_ready",
+  "readiness_value": "1\n",
+  "schema": 1,
+  "source_firmware": "artifacts/wifi-firmware, coordinator diagnostic payload",
+  "source_module": "/srv/t380-build/logs/power077-kernel-build-v1/artifacts/wlan.ko",
+  "source_regdb": "wireless-regdb 2026.05.30-0ubuntu1~24.04.1, signature verified against existing kernel signer",
+  "status": "integrated-runtime-unproven"
+}

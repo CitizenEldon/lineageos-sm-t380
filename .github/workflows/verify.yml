@@ -1,0 +1,29 @@
+name: Verify public tools and source
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Verify small repository files
+        run: python -B tools/verify.py --repository-only
+      - name: Test archive and signature rejection
+        run: python -B -m unittest discover -s tools/tests -p "test_*.py" -v
+      - name: Test exact-byte verification and public installer safeguards
+        shell: pwsh
+        run: |
+          & ./tools/tests/test_installer.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & ./tools/tests/test_public_installer.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

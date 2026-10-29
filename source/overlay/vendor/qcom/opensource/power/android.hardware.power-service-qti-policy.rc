@@ -1,0 +1,8 @@
+# Selected exact-policy service: no legacy framebuffer mutation.
+service vendor.power /vendor/bin/hw/android.hardware.power-service-qti
+    class hal
+    user system
+    group system
+    # Run synchronously in the service restart path before init publishes the
+    # restarting state and launches a replacement process.
+    onrestart write /sys/class/kgsl/kgsl-3d0/min_pwrlevel 4

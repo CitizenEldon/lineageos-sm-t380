@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# System init owns apexd status; the normal updatable adbd owns real FFS readiness.
+# Debug builds only. No early static daemon or simulated APEX/USB state.
+on property:apexd.status=ready && property:ro.debuggable=1
+    setprop sys.usb.config adb

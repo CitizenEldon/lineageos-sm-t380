@@ -1,0 +1,12 @@
+diff --git a/common/private/mac_permissions.xml b/common/private/mac_permissions.xml
+index 68e39ed..4cd676d 100644
+--- a/common/private/mac_permissions.xml
++++ b/common/private/mac_permissions.xml
+@@ -1,7 +1,4 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <policy>
+-    <signer signature="@MEDIASHELL" >
+-      <seinfo value="mediashell" />
+-    </signer>
+ </policy>
+ 

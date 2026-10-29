@@ -1,0 +1,394 @@
+{
+  "pins": {
+    "vendor-mithorium": "e264bd19f6158e9882efa1d7afe28e34bfd8ee4d",
+    "mithorium": "2639cd7377cbd6b6ecf6f5317637c3faca96f86c",
+    "Mi8937": "1d087f13f1027de6b110ae3f2a24f27de5d841a8"
+  },
+  "files": {
+    "proprietary/vendor/lib/egl/eglSubDriverAndroid.so": {
+      "sha256": "10f14a0dfee13d014ae7882695ede4dcf7953be2cbb973a26f3ac2be8203ab2a",
+      "git_blob": "2bea982c0073d1d1b92c71c87002d3332643e1b9",
+      "bytes": 27840,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "eglSubDriverAndroid.so",
+      "needed": [
+        "libEGL_adreno.so",
+        "libcutils.so",
+        "libhardware.so",
+        "libgsl.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib/egl/libEGL_adreno.so": {
+      "sha256": "2bd130ab84ce6bc70b12c9232ca1fee05a1cb57f7cea780d0e4ad13be1ba5cb1",
+      "git_blob": "71c40336aff293bcbb4f92639672182dd87dd2b2",
+      "bytes": 21536,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "libEGL_adreno.so",
+      "needed": [
+        "libadreno_utils.so",
+        "libgsl.so",
+        "libcutils.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib/egl/libGLESv1_CM_adreno.so": {
+      "sha256": "c6a2e8b2ffcde6126ebc95e2836409ce07269d1e0b577ee4edae828a76c4d6df",
+      "git_blob": "e58cd2b2d1644fc6f43e253cd99569e4a93a1e9c",
+      "bytes": 186536,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "libGLESv1_CM_adreno.so",
+      "needed": [
+        "libgsl.so",
+        "libcutils.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib/egl/libGLESv2_adreno.so": {
+      "sha256": "c4f0f7427bae8cebeafef1290a116452cae489f3f524920c7e0a51f88c06da7d",
+      "git_blob": "91ba9c6b97f5c37559af6f838ac49cfbfe41484f",
+      "bytes": 2659260,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "libGLESv2_adreno.so",
+      "needed": [
+        "libadreno_utils.so",
+        "libgsl.so",
+        "libllvm-glnext.so",
+        "libcutils.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib/libgsl.so": {
+      "sha256": "fd021d15e4069a15206c0397fdc5a5c2dab0b5f22467c9982d463befe9b3fbb5",
+      "git_blob": "f2d14bb065579e747163640d1959b558d90e916c",
+      "bytes": 1958704,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "libgsl.so",
+      "needed": [
+        "libcutils.so",
+        "liblog.so",
+        "libz.so",
+        "libsync.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib/libadreno_utils.so": {
+      "sha256": "4f004aa9eba5a701df0fe3e4d11eb0bce58fe00d64983cbe49fa397c10307f5d",
+      "git_blob": "4b0150327a9371c0af99c1a5ca9eae9005ec0664",
+      "bytes": 59964,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "libadreno_utils.so",
+      "needed": [
+        "libgsl.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": [
+        "adreno_get_aligned_gpu_buffer_size",
+        "adreno_get_metadata_blob_size",
+        "adreno_init_memory_layout",
+        "compute_aligned_width_and_height",
+        "compute_compressedfmt_aligned_width_and_height",
+        "compute_fmt_aligned_width_and_height",
+        "compute_surface_padding",
+        "get_gpu_pixel_alignment",
+        "isSecureContextSupportedByGpu",
+        "isUBWCSupportedByGpu"
+      ]
+    },
+    "proprietary/vendor/lib/libllvm-glnext.so": {
+      "sha256": "0e74e5e406858992899442530814ec58fdafac3bbbc956ab37895d36f5e2f2c9",
+      "git_blob": "b8ef5c14dfc16def87988e22fbb096338eaac657",
+      "bytes": 9819396,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "libllvm-glnext.so",
+      "needed": [
+        "libgsl.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib/libCB.so": {
+      "sha256": "141731d9e8b74cca2e58b137556e15873c4817ef87f0c43b2597ab933d2e7030",
+      "git_blob": "bcfe02f9261b3fde9c99beee4858aec0f20d8ebf",
+      "bytes": 2362032,
+      "elf_class": 32,
+      "machine": 40,
+      "soname": "libCB.so",
+      "needed": [
+        "libcutils.so",
+        "liblog.so",
+        "libgsl.so",
+        "libutils.so",
+        "libvndksupport.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/egl/eglSubDriverAndroid.so": {
+      "sha256": "3035453d19a2161eb3b64979c45a7cfdf3c0a71247165947e5b734a278e81f13",
+      "git_blob": "5b8be438fc559df3140765d5ae2415a4a64def33",
+      "bytes": 48288,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "eglSubDriverAndroid.so",
+      "needed": [
+        "libEGL_adreno.so",
+        "libcutils.so",
+        "libhardware.so",
+        "libgsl.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/egl/libEGL_adreno.so": {
+      "sha256": "693812a39f725e3e852358a094aa7e9a21423d8dceb6c4d3d7f70634e15f858c",
+      "git_blob": "946e8fb1183b6a0afc1aa66e1c9df07af0af45f1",
+      "bytes": 39864,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libEGL_adreno.so",
+      "needed": [
+        "libadreno_utils.so",
+        "libgsl.so",
+        "libcutils.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/egl/libGLESv1_CM_adreno.so": {
+      "sha256": "3b4947e61b7e4faf34f5de7d414769a1744407b66538c53ef7deb7c332cd7ec7",
+      "git_blob": "8f5e08287c9ded0b8cbdb0d5273aa30768ed3203",
+      "bytes": 233824,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libGLESv1_CM_adreno.so",
+      "needed": [
+        "libgsl.so",
+        "libcutils.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/egl/libGLESv2_adreno.so": {
+      "sha256": "0b4175064a8951450dfccd2cb8cddd0248178c3878ac6d908500de186947ae8c",
+      "git_blob": "14727bc39a4ae9b5f881646fb00eebb9fdc7f58d",
+      "bytes": 3744864,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libGLESv2_adreno.so",
+      "needed": [
+        "libadreno_utils.so",
+        "libgsl.so",
+        "libllvm-glnext.so",
+        "libcutils.so",
+        "libdl.so",
+        "libz.so",
+        "liblog.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/libgsl.so": {
+      "sha256": "cdaf4984724606ef487e43133a555dc07c822626acd3ff24978fe24af522183b",
+      "git_blob": "9e7b1fb6330b037ab907aa9059d0bb471e9fc24f",
+      "bytes": 2129904,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libgsl.so",
+      "needed": [
+        "libcutils.so",
+        "liblog.so",
+        "libz.so",
+        "libsync.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/libadreno_utils.so": {
+      "sha256": "cede8beed4b1801c89a23aef5ed5d689060d5139aefa987265697934ef38a843",
+      "git_blob": "435d3526ab01c03ba00d0e5a26b8c3fc84151def",
+      "bytes": 81376,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libadreno_utils.so",
+      "needed": [
+        "libgsl.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": [
+        "adreno_get_aligned_gpu_buffer_size",
+        "adreno_get_metadata_blob_size",
+        "adreno_init_memory_layout",
+        "compute_aligned_width_and_height",
+        "compute_compressedfmt_aligned_width_and_height",
+        "compute_fmt_aligned_width_and_height",
+        "compute_surface_padding",
+        "get_gpu_pixel_alignment",
+        "isSecureContextSupportedByGpu",
+        "isUBWCSupportedByGpu"
+      ]
+    },
+    "proprietary/vendor/lib64/libllvm-glnext.so": {
+      "sha256": "8bb58c1d11c58de2564381884700e32cf2262f133d82471735128821815a8ee4",
+      "git_blob": "b36a935899b00204b0a9c508fe9a59b93e7eba2c",
+      "bytes": 13644360,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libllvm-glnext.so",
+      "needed": [
+        "libgsl.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/libCB.so": {
+      "sha256": "f9cf36f93935aab636e6ee2965058763b1976d08e4788fc2fd4dcd4f2ac7f20e",
+      "git_blob": "1da96a9a83354413f5eaf5e7b939ac30c2c5ef10",
+      "bytes": 3140184,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libCB.so",
+      "needed": [
+        "libcutils.so",
+        "liblog.so",
+        "libgsl.so",
+        "libutils.so",
+        "libvndksupport.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/libsdmextension.so": {
+      "sha256": "c9fef375b7425dc619e4a107322401f58d7557f8504ef496e7e4f8ced76a8d66",
+      "git_blob": "81890fc6f75625c447433726982a1fa86258246b",
+      "bytes": 360144,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libsdmextension.so",
+      "needed": [
+        "libsdmutils.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/lib64/libscalar.so": {
+      "sha256": "25137b1b2b2ce0c76f4641062b9805b2d9a340b617c23154c592542e7587f4ad",
+      "git_blob": "7dea3962c8719f21cee0c062fc03dd48012ddfb6",
+      "bytes": 37296,
+      "elf_class": 64,
+      "machine": 183,
+      "soname": "libscalar.so",
+      "needed": [
+        "libsdmutils.so",
+        "libc++.so",
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ],
+      "allocator_hooks": []
+    },
+    "proprietary/vendor/firmware/a300_pfp.fw": {
+      "sha256": "b6e66400d46d52dc343d370b94362d564a765994bda47dc026961dd47a9ca7a9",
+      "bytes": 1156,
+      "source": "stock SM-T380 artifacts/gpu-firmware"
+    },
+    "proprietary/vendor/firmware/a300_pm4.fw": {
+      "sha256": "f78c57e879e96a2c0ceeea31dbd30f7f1d4526f9c876e80481c654f08daaecd3",
+      "bytes": 9220,
+      "source": "stock SM-T380 artifacts/gpu-firmware"
+    }
+  },
+  "source_modules": {
+    "libc": "bionic/libc/Android.bp",
+    "libm": "bionic/libm/Android.bp",
+    "libdl": "bionic/libdl/Android.bp",
+    "libcutils": "system/core/libcutils/Android.bp",
+    "liblog": "system/logging/liblog/Android.bp",
+    "libz": "external/zlib/Android.bp",
+    "libsync": "system/core/libsync/Android.bp",
+    "libutils": "system/core/libutils/Android.bp",
+    "libhardware": "hardware/libhardware/Android.bp",
+    "libvndksupport": "system/core/libvndksupport/Android.bp",
+    "libc++": "prebuilts/clang/host/linux-x86/Android.bp",
+    "libsdmutils": "hardware/qcom-caf/msm8953/display/sdm/libs/utils/Android.bp"
+  },
+  "limitations": [
+    "Static module-name and ELF closure only; vendor variants, undefined symbols, linker namespaces, allocator handle ABI, KGSL ioctls and rendering require product build/device tests."
+  ]
+}

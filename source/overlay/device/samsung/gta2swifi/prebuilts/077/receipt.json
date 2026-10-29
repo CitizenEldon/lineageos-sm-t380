@@ -1,0 +1,10 @@
+{
+  "diagnostic": "077",
+  "charge_inhibited": false,
+  "charging_mode": "samsung_stock_autonomous",
+  "source": "/srv/t380-build/logs/power077-kernel-build-v1/artifacts/boot.img",
+  "source_sha256": "e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48",
+  "kernel_sha256": "f51077855ee1989fa3caf9e56b61ebfccd852e836078bad6c2023e1c4dce3be2",
+  "dt_sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+  "kernel_source_manifest_sha256": "3acbeddba036918b93aeab8478af8ff02aba97003a8522d894be1aae95c24d9f"
+}

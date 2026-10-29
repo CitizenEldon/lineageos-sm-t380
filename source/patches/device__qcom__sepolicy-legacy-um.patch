@@ -1,0 +1,25 @@
+diff --git a/legacy/vendor/common/sysmonapp/mac_permissions.xml b/legacy/vendor/common/sysmonapp/mac_permissions.xml
+index 1b87982..c2036e9 100644
+--- a/legacy/vendor/common/sysmonapp/mac_permissions.xml
++++ b/legacy/vendor/common/sysmonapp/mac_permissions.xml
+@@ -30,7 +30,4 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ -->
+ 
+ <policy>
+-    <signer signature="@SYSMONAPP" >
+-      <seinfo value="sysmonapp" />
+-    </signer>
+ </policy>
+diff --git a/legacy/vendor/ssg/mac_permissions.xml b/legacy/vendor/ssg/mac_permissions.xml
+index cc78572..e23a57c 100644
+--- a/legacy/vendor/ssg/mac_permissions.xml
++++ b/legacy/vendor/ssg/mac_permissions.xml
+@@ -33,8 +33,5 @@ met:
+ See /system/sepolicy/private/mac_permissions.xml
+ -->
+ 
+-    <signer signature="@SSG" >
+-      <seinfo value="ssgapp" />
+-    </signer>
+ 
+ </policy>

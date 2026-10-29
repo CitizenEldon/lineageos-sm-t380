@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Legacy configfs stops the adbd service shared by USB and wireless debugging.
+# Restart only after its reset completes when wireless debugging remains opted in.
+# An empty shutdown request prevents a restart during framework shutdown.
+on property:sys.usb.state=none && property:sys.usb.configfs=1 && property:persist.adb.tls_server.enable=1 && property:sys.shutdown.requested=
+    start adbd

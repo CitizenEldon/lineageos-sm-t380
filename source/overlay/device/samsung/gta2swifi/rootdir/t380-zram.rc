@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Stock init-mmd-prop.rc publishes this after boot completion when mmd is absent.
+# A dedicated fstab avoids altering SYSTEM/DATA mounts or the native shell target.
+# Only one owner sets up zram; a future mmd migration must replace this action.
+on property:mmd.enabled_aconfig=false
+    swapon_all /vendor/etc/fstab.t380-zram

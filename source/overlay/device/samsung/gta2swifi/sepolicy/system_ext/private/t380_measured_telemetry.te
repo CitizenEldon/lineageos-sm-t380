@@ -1,0 +1,3 @@
+type sysfs_t380_measured_telemetry, fs_type, sysfs_type;
+allow hal_health_server sysfs_t380_measured_telemetry:file { getattr open read };
+allow system_server sysfs_t380_measured_telemetry:file { getattr open read };

@@ -1,0 +1,598 @@
+diff --git a/core/java/android/view/ViewRootImpl.java b/core/java/android/view/ViewRootImpl.java
+index fa1c190eb..9b1511ca3 100644
+--- a/core/java/android/view/ViewRootImpl.java
++++ b/core/java/android/view/ViewRootImpl.java
+@@ -5615,7 +5615,11 @@ public final class ViewRootImpl implements ViewParent,
+             }
+ 
+             if (mAttachInfo.mThreadedRenderer != null) {
+-                mAttachInfo.mThreadedRenderer.setStopped(mStopped);
++                if (usingAsyncReport && !mStopped) {
++                    mAttachInfo.mThreadedRenderer.resumeAfterDraw();
++                } else {
++                    mAttachInfo.mThreadedRenderer.setStopped(mStopped);
++                }
+             }
+ 
+             if (LOCAL_LOGV) {
+diff --git a/graphics/java/android/graphics/HardwareRenderer.java b/graphics/java/android/graphics/HardwareRenderer.java
+index 2ad64817d..7686e09d7 100644
+--- a/graphics/java/android/graphics/HardwareRenderer.java
++++ b/graphics/java/android/graphics/HardwareRenderer.java
+@@ -596,6 +596,17 @@ public class HardwareRenderer {
+         nSetStopped(mNativeProxy, stopped);
+     }
+ 
++    /**
++     * Enqueues restoration of the active state after an asynchronously reported draw.
++     * The caller must retain its draw callbacks for reporting buffer readiness. This does not
++     * wait for the RenderThread or replace synchronous lifecycle stopping.
++     *
++     * @hide
++     */
++    public void resumeAfterDraw() {
++        nResumeAfterDraw(mNativeProxy);
++    }
++
+     /**
+      * Hard stops rendering into the surface. If the renderer is stopped it will
+      * block any attempt to render. Calls to {@link FrameRenderRequest#syncAndDraw()} will
+@@ -1622,6 +1633,7 @@ public class HardwareRenderer {
+     private static native boolean nPause(long nativeProxy);
+ 
+     private static native void nSetStopped(long nativeProxy, boolean stopped);
++    private static native void nResumeAfterDraw(long nativeProxy);
+ 
+     private static native void nSetLightGeometry(long nativeProxy,
+             float lightX, float lightY, float lightZ, float lightRadius);
+diff --git a/libs/hwui/jni/android_graphics_HardwareRenderer.cpp b/libs/hwui/jni/android_graphics_HardwareRenderer.cpp
+index 91bdf4fb2..659979b1b 100644
+--- a/libs/hwui/jni/android_graphics_HardwareRenderer.cpp
++++ b/libs/hwui/jni/android_graphics_HardwareRenderer.cpp
+@@ -238,6 +238,12 @@ static void android_view_ThreadedRenderer_setStopped(JNIEnv* env, jobject clazz,
+     proxy->setStopped(stopped);
+ }
+ 
++static void android_view_ThreadedRenderer_resumeAfterDraw(JNIEnv* env, jobject clazz,
++        jlong proxyPtr) {
++    RenderProxy* proxy = reinterpret_cast<RenderProxy*>(proxyPtr);
++    proxy->resumeAfterDraw();
++}
++
+ static void android_view_ThreadedRenderer_setLightAlpha(JNIEnv* env, jobject clazz, jlong proxyPtr,
+         jfloat ambientShadowAlpha, jfloat spotShadowAlpha) {
+     RenderProxy* proxy = reinterpret_cast<RenderProxy*>(proxyPtr);
+@@ -996,6 +1002,7 @@ static const JNINativeMethod gMethods[] = {
+         {"nSetSurfaceControl", "(JJ)V", (void*)android_view_ThreadedRenderer_setSurfaceControl},
+         {"nPause", "(J)Z", (void*)android_view_ThreadedRenderer_pause},
+         {"nSetStopped", "(JZ)V", (void*)android_view_ThreadedRenderer_setStopped},
++        {"nResumeAfterDraw", "(J)V", (void*)android_view_ThreadedRenderer_resumeAfterDraw},
+         {"nSetLightAlpha", "(JFF)V", (void*)android_view_ThreadedRenderer_setLightAlpha},
+         {"nSetLightGeometry", "(JFFFF)V", (void*)android_view_ThreadedRenderer_setLightGeometry},
+         {"nSetOpaque", "(JZ)V", (void*)android_view_ThreadedRenderer_setOpaque},
+diff --git a/libs/hwui/renderthread/RenderProxy.cpp b/libs/hwui/renderthread/RenderProxy.cpp
+index 16df386fd..a4f553ca2 100644
+--- a/libs/hwui/renderthread/RenderProxy.cpp
++++ b/libs/hwui/renderthread/RenderProxy.cpp
+@@ -141,6 +141,10 @@ void RenderProxy::setStopped(bool stopped) {
+     mRenderThread.queue().runSync([this, stopped]() { mContext->setStopped(stopped); });
+ }
+ 
++void RenderProxy::resumeAfterDraw() {
++    mRenderThread.queue().post([this]() { mContext->setStopped(false); });
++}
++
+ void RenderProxy::setLightAlpha(uint8_t ambientShadowAlpha, uint8_t spotShadowAlpha) {
+     mRenderThread.queue().post(
+             [=, this]() { mContext->setLightAlpha(ambientShadowAlpha, spotShadowAlpha); });
+diff --git a/libs/hwui/renderthread/RenderProxy.h b/libs/hwui/renderthread/RenderProxy.h
+index 76f10347a..464b7098a 100644
+--- a/libs/hwui/renderthread/RenderProxy.h
++++ b/libs/hwui/renderthread/RenderProxy.h
+@@ -84,6 +84,7 @@ public:
+     void allocateBuffers();
+     bool pause();
+     void setStopped(bool stopped);
++    void resumeAfterDraw();
+     void setLightAlpha(uint8_t ambientShadowAlpha, uint8_t spotShadowAlpha);
+     void setLightGeometry(const Vector3& lightCenter, float lightRadius);
+     void setHardwareBufferRenderParams(const HardwareBufferRenderParams& params);
+diff --git a/packages/SettingsLib/Spa/spa/src/com/android/settingslib/spa/framework/compose/HighlightBox.kt b/packages/SettingsLib/Spa/spa/src/com/android/settingslib/spa/framework/compose/HighlightBox.kt
+index e01257102..ef64da576 100644
+--- a/packages/SettingsLib/Spa/spa/src/com/android/settingslib/spa/framework/compose/HighlightBox.kt
++++ b/packages/SettingsLib/Spa/spa/src/com/android/settingslib/spa/framework/compose/HighlightBox.kt
+@@ -70,6 +70,10 @@ internal fun Modifier.highlightBackground(
+     shape: Shape = RectangleShape,
+ ): Modifier = composed {
+     val highlightItemKey = LocalHighlightItemKey.current
++    if (highlightItemKey == null) {
++        return@composed then(Modifier.background(color = originalColor, shape = shape))
++    }
++
+     val navController = LocalNavController.current
+     val isHighLight = rememberSaveable {
+         highlightItemKey != null && navController.isHighLightItem(highlightItemKey)
+diff --git a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/model/app/AppListViewModel.kt b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/model/app/AppListViewModel.kt
+index bd99ebdfa..f65374479 100644
+--- a/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/model/app/AppListViewModel.kt
++++ b/packages/SettingsLib/SpaPrivileged/src/com/android/settingslib/spaprivileged/model/app/AppListViewModel.kt
+@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.SharingStarted
+ import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.filterNotNull
++import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.flow.flatMapLatest
+ import kotlinx.coroutines.flow.flowOf
+ import kotlinx.coroutines.flow.launchIn
+@@ -161,10 +162,8 @@ internal open class AppListViewModelImpl<T : AppRecord>(
+ 
+     fun reloadApps() {
+         scope.launch {
+-            userSubGraphsFlow.collect { userSubGraphList ->
+-                for (userSubGraph in userSubGraphList) {
+-                    userSubGraph.reloadApps()
+-                }
++            userSubGraphsFlow.first().forEach { userSubGraph ->
++                userSubGraph.reloadApps()
+             }
+         }
+     }
+diff --git a/packages/SystemUI/src/com/android/systemui/battery/BatteryMeterView.java b/packages/SystemUI/src/com/android/systemui/battery/BatteryMeterView.java
+index 1806e4e60..d30968d39 100644
+--- a/packages/SystemUI/src/com/android/systemui/battery/BatteryMeterView.java
++++ b/packages/SystemUI/src/com/android/systemui/battery/BatteryMeterView.java
+@@ -410,6 +410,11 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
+     }
+ 
+     void updatePercentText() {
++        if (mBatteryStateUnknown) {
++            mEstimateText = null;
++            if (mBatteryPercentView != null) mBatteryPercentView.setText(null);
++            return;
++        }
+         if (!NewStatusBarIcons.isEnabled()) {
+             updatePercentTextLegacy();
+             return;
+@@ -423,6 +428,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
+         ) {
+             mBatteryEstimateFetcher.fetchBatteryTimeRemainingEstimate(
+                     (String estimate) -> {
++                        if (mBatteryStateUnknown) return;
+                         if (mBatteryPercentView == null) {
+                             // Similar to the legacy behavior, inflate and add the view. We will
+                             // only use it for the estimate text
+@@ -461,6 +467,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
+             if (mShowPercentMode == MODE_ESTIMATE && !isCharging()) {
+                 mBatteryEstimateFetcher.fetchBatteryTimeRemainingEstimate(
+                         (String estimate) -> {
++                        if (mBatteryStateUnknown) return;
+                     if (mBatteryPercentView == null) {
+                         return;
+                     }
+@@ -481,6 +488,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
+     }
+ 
+     private void setPercentTextAtCurrentLevel() {
++        if (mBatteryStateUnknown) return;
+         if (mBatteryPercentView != null) {
+             mEstimateText = null;
+             String percentText = NumberFormat.getPercentInstance().format(mLevel / 100f);
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/BatteryControllerImpl.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/BatteryControllerImpl.java
+index ddda368cb..641b75fff 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/BatteryControllerImpl.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/BatteryControllerImpl.java
+@@ -92,7 +92,7 @@ public class BatteryControllerImpl extends BroadcastReceiver implements BatteryC
+     protected boolean mPluggedIn;
+     private int mPluggedChargingSource;
+     protected boolean mCharging;
+-    private boolean mStateUnknown = false;
++    private boolean mStateUnknown = "gta2swifi".equals(android.os.Build.DEVICE);
+     private boolean mCharged;
+     protected boolean mPowerSave;
+     private boolean mAodPowerSave;
+@@ -224,10 +224,13 @@ public class BatteryControllerImpl extends BroadcastReceiver implements BatteryC
+         synchronized (mChangeCallbacks) {
+             mChangeCallbacks.add(cb);
+         }
+-        if (!mHasReceivedBattery) return;
++        if (!mHasReceivedBattery) {
++            if (mStateUnknown) cb.onBatteryUnknownStateChanged(true);
++            return;
++        }
+ 
+         // Make sure new callbacks get the correct initial state
+-        cb.onBatteryLevelChanged(mLevel, mPluggedIn, mCharging);
++        if (!mStateUnknown) cb.onBatteryLevelChanged(mLevel, mPluggedIn, mCharging);
+         cb.onPowerSaveChanged(mPowerSave);
+         cb.onBatteryUnknownStateChanged(mStateUnknown);
+         cb.onWirelessChargingChanged(mWirelessCharging);
+@@ -253,7 +256,9 @@ public class BatteryControllerImpl extends BroadcastReceiver implements BatteryC
+                 return;
+             }
+             mHasReceivedBattery = true;
+-            mLevel = (int) (100f
++            boolean telemetryUnknown = "gta2swifi".equals(android.os.Build.DEVICE)
++                    && intent.getBooleanExtra("t380.telemetry_unavailable", false);
++            if (!telemetryUnknown) mLevel = (int) (100f
+                     * intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0)
+                     / intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100));
+             int previousPluggedChargingSource = mPluggedChargingSource;
+@@ -271,7 +276,7 @@ public class BatteryControllerImpl extends BroadcastReceiver implements BatteryC
+             }
+ 
+             boolean present = intent.getBooleanExtra(EXTRA_PRESENT, true);
+-            boolean unknown = !present;
++            boolean unknown = !present || telemetryUnknown;
+             if (unknown != mStateUnknown) {
+                 mStateUnknown = unknown;
+                 fireBatteryUnknownStateChanged();
+@@ -484,6 +489,7 @@ public class BatteryControllerImpl extends BroadcastReceiver implements BatteryC
+     }
+ 
+     protected void fireBatteryLevelChanged() {
++        if (mStateUnknown) return;
+         mLogger.logBatteryLevelChangedCallback(mLevel, mPluggedIn, mCharging);
+         dispatchSafeChange(
+                 (callback) -> callback.onBatteryLevelChanged(mLevel, mPluggedIn, mCharging));
+diff --git a/services/core/java/com/android/server/BatteryService.java b/services/core/java/com/android/server/BatteryService.java
+index f4b69f16c..a83524c52 100644
+--- a/services/core/java/com/android/server/BatteryService.java
++++ b/services/core/java/com/android/server/BatteryService.java
+@@ -31,9 +31,11 @@ import android.app.ActivityManager;
+ import android.app.ActivityManagerInternal;
+ import android.app.AppOpsManager;
+ import android.app.BroadcastOptions;
++import android.content.BroadcastReceiver;
+ import android.content.ContentResolver;
+ import android.content.Context;
+ import android.content.Intent;
++import android.content.IntentFilter;
+ import android.content.pm.PackageManager;
+ import android.content.pm.PackageManagerInternal;
+ import android.content.pm.ResolveInfo;
+@@ -162,6 +164,21 @@ public final class BatteryService extends SystemService {
+     private final Object mLock = new Object();
+     private final ConditionVariable mConditionVariable = new ConditionVariable();
+     private HealthInfo mHealthInfo;
++    private final boolean mT380Target = "gta2swifi".equals(Build.DEVICE);
++    private final T380Telemetry mT380Telemetry = new T380Telemetry();
++    private boolean mT380Stopping;
++    private boolean mT380UnknownBroadcast;
++    private final Runnable mT380Tick = new Runnable() {
++        @Override public void run() {
++            synchronized (mLock) {
++                if (!mT380Stopping) {
++                    updateT380TelemetryLocked();
++                    processValuesLocked(false);
++                    mHandler.postDelayed(this, 1000);
++                }
++            }
++        }
++    };
+     private final HealthInfo mLastHealthInfo = new HealthInfo();
+     private boolean mBatteryLevelCritical;
+ 
+@@ -502,10 +519,31 @@ public final class BatteryService extends SystemService {
+         }
+ 
+         mBatteryInputSuspended = PowerProperties.battery_input_suspended().orElse(false);
++        if (mT380Target) {
++            // Explicit null-safe unavailable state. Its default numeric members are
++            // never processed or published before a physical measurement.
++            mHealthInfo = new HealthInfo();
++            mHealthInfo.batteryPresent = true;
++            mHealthInfo.batteryHealth = BatteryManager.BATTERY_HEALTH_UNKNOWN;
++            mHealthInfo.batteryStatus = BatteryManager.BATTERY_STATUS_UNKNOWN;
++            mHealthInfo.batteryCapacityLevel = BatteryCapacityLevel.UNKNOWN;
++            mT380Telemetry.observe(null, SystemClock.uptimeMillis());
++        }
+     }
+ 
+     @Override
+     public void onStart() {
++        if (mT380Target) {
++            mContext.registerReceiver(new BroadcastReceiver() {
++                @Override public void onReceive(Context context, Intent intent) {
++                    synchronized (mLock) {
++                        mT380Stopping = true;
++                        mHandler.removeCallbacks(mT380Tick);
++                    }
++                }
++            }, new IntentFilter(Intent.ACTION_SHUTDOWN));
++            mHandler.post(mT380Tick);
++        }
+         registerHealthCallback();
+ 
+         mBinderService = new BinderService();
+@@ -597,6 +635,7 @@ public final class BatteryService extends SystemService {
+     }
+ 
+     private boolean isPoweredLocked(int plugTypeSet) {
++        if (mT380Target && !mT380Telemetry.ready) return false;
+         // assume we are powered if battery state is unknown so
+         // the "stay on while plugged in" option will work.
+         if (mHealthInfo.batteryStatus == BatteryManager.BATTERY_STATUS_UNKNOWN) {
+@@ -638,7 +677,47 @@ public final class BatteryService extends SystemService {
+                     || mHealthInfo.batteryLevel > mLastLowBatteryWarningLevel);
+     }
+ 
++    private T380Telemetry.Sample readT380TelemetryLocked() {
++        try {
++            return T380Telemetry.Sample.parse(FileUtils.readTextFile(
++                    new File(T380Telemetry.PATH), 2048, null), SystemClock.elapsedRealtime());
++        } catch (IOException e) { return null; }
++    }
++
++    private void updateT380TelemetryLocked() {
++        if (!mT380Target) return;
++        T380Telemetry.Sample sample = readT380TelemetryLocked();
++        mT380Telemetry.observe(sample, SystemClock.uptimeMillis());
++        if (sample != null && sample.temperatureValid) {
++            // Independent valid thermal evidence remains actionable with no SOC.
++            mHealthInfo.batteryTemperatureTenthsCelsius = sample.temperature;
++            shutdownIfOverTempLocked();
++        }
++        if (mT380Telemetry.ready) {
++            mHealthInfo.batteryLevel = sample.capacity;
++            mHealthInfo.batteryCapacityLevel = BatteryCapacityLevel.UNSUPPORTED;
++            mHealthInfo.batteryStatus = sample.status;
++        }
++    }
++
++    private void broadcastT380UnavailableLocked() {
++        if (mT380UnknownBroadcast) return;
++        mT380UnknownBroadcast = true;
++        Intent intent = new Intent(Intent.ACTION_BATTERY_CHANGED);
++        intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY | Intent.FLAG_RECEIVER_REPLACE_PENDING);
++        intent.putExtra(T380Telemetry.UNAVAILABLE_EXTRA, true);
++        intent.putExtra(BatteryManager.EXTRA_PRESENT, true);
++        intent.putExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN);
++        intent.putExtra(BatteryManager.EXTRA_HEALTH, mHealthInfo.batteryHealth);
++        // No numeric level, charge counter, or stats for an unavailable sample.
++        mHandler.removeMessages(MSG_BROADCAST_BATTERY_CHANGED);
++        SomeArgs args = SomeArgs.obtain();
++        args.arg1 = mContext; args.arg2 = intent; args.arg3 = true;
++        mHandler.obtainMessage(MSG_BROADCAST_BATTERY_CHANGED, args).sendToTarget();
++    }
++
+     private boolean shouldShutdownLocked() {
++        if (mT380Target && !mT380Telemetry.ready) return false;
+         if (mHealthInfo.batteryCapacityLevel != BatteryCapacityLevel.UNSUPPORTED) {
+             return (mHealthInfo.batteryCapacityLevel == BatteryCapacityLevel.CRITICAL);
+         }
+@@ -741,6 +820,13 @@ public final class BatteryService extends SystemService {
+         synchronized (mLock) {
+             if (!mUpdatesStopped) {
+                 mHealthInfo = info;
++                if (mT380Target) {
++                    updateT380TelemetryLocked();
++                    if (!mT380Telemetry.ready) {
++                        mHealthInfo.batteryStatus = BatteryManager.BATTERY_STATUS_UNKNOWN;
++                        mHealthInfo.batteryPresent = true;
++                    }
++                }
+                 // Process the new values.
+                 processValuesLocked(false);
+                 mConditionVariable.open();
+@@ -766,6 +852,19 @@ public final class BatteryService extends SystemService {
+     }
+ 
+     private void processValuesLocked(boolean force) {
++        if (mT380Target && !mT380Telemetry.ready) {
++            mBatteryLevelCritical = false;
++            mBatteryLevelLow = false;
++            mPlugType = BATTERY_PLUGGED_NONE;
++            broadcastT380UnavailableLocked();
++            return;
++        }
++        if (mT380Target && mT380UnknownBroadcast) {
++            // UNKNOWN sticky broadcast must be replaced even when every numeric
++            // field matches the preceding valid sample, including race recovery.
++            force = true;
++            mT380UnknownBroadcast = false;
++        }
+         boolean logOutlier = false;
+         long dischargeDuration = 0;
+ 
+@@ -1073,7 +1172,9 @@ public final class BatteryService extends SystemService {
+ 
+     private static void broadcastBatteryChangedIntent(Context context, Intent intent,
+             Bundle options, boolean forceUpdate) {
+-        traceBatteryChangedBroadcastEvent(intent, forceUpdate);
++        if (!intent.getBooleanExtra(T380Telemetry.UNAVAILABLE_EXTRA, false)) {
++            traceBatteryChangedBroadcastEvent(intent, forceUpdate);
++        }
+         // TODO (293959093): It is important that SystemUI receives this broadcast as soon as
+         // possible. Ideally, it should be using binder callbacks but until then, dispatch this
+         // as a foreground broadcast to SystemUI.
+@@ -1473,7 +1574,7 @@ public final class BatteryService extends SystemService {
+                         pw.println(mHealthInfo.batteryStatus);
+                         break;
+                     case "level":
+-                        pw.println(mHealthInfo.batteryLevel);
++                        pw.println(mT380Target && !mT380Telemetry.ready ? "unavailable" : Integer.toString(mHealthInfo.batteryLevel));
+                         break;
+                     case "counter":
+                         pw.println(mHealthInfo.batteryChargeCounterUah);
+@@ -1684,7 +1785,7 @@ public final class BatteryService extends SystemService {
+                 pw.println("  status: " + mHealthInfo.batteryStatus);
+                 pw.println("  health: " + mHealthInfo.batteryHealth);
+                 pw.println("  present: " + mHealthInfo.batteryPresent);
+-                pw.println("  level: " + mHealthInfo.batteryLevel);
++                pw.println("  level: " + (mT380Target && !mT380Telemetry.ready ? "unavailable" : Integer.toString(mHealthInfo.batteryLevel)));
+                 pw.println("  scale: " + BATTERY_SCALE);
+                 pw.println("  voltage: " + mHealthInfo.batteryVoltageMillivolts);
+                 pw.println(" Time when the latest updated value of the voltage was sent via "
+@@ -1733,7 +1834,9 @@ public final class BatteryService extends SystemService {
+             proto.write(BatteryServiceDumpProto.STATUS, mHealthInfo.batteryStatus);
+             proto.write(BatteryServiceDumpProto.HEALTH, mHealthInfo.batteryHealth);
+             proto.write(BatteryServiceDumpProto.IS_PRESENT, mHealthInfo.batteryPresent);
+-            proto.write(BatteryServiceDumpProto.LEVEL, mHealthInfo.batteryLevel);
++            if (!mT380Target || mT380Telemetry.ready) {
++                proto.write(BatteryServiceDumpProto.LEVEL, mHealthInfo.batteryLevel);
++            }
+             proto.write(BatteryServiceDumpProto.SCALE, BATTERY_SCALE);
+             proto.write(BatteryServiceDumpProto.VOLTAGE, mHealthInfo.batteryVoltageMillivolts);
+             proto.write(
+@@ -1764,6 +1867,7 @@ public final class BatteryService extends SystemService {
+     }
+ 
+     private synchronized void updateLedPulse() {
++        if (mT380Target && !mT380Telemetry.ready) return;
+         mLed.updateLightsLocked();
+     }
+ 
+@@ -1907,21 +2011,22 @@ public final class BatteryService extends SystemService {
+         @Override
+         public int getBatteryLevel() {
+             synchronized (mLock) {
+-                return mHealthInfo.batteryLevel;
++                return mT380Target && !mT380Telemetry.ready
++                        ? Integer.MIN_VALUE : mHealthInfo.batteryLevel;
+             }
+         }
+ 
+         @Override
+         public int getBatteryChargeCounter() {
+             synchronized (mLock) {
+-                return mHealthInfo.batteryChargeCounterUah;
++                return mT380Target && !mT380Telemetry.ready ? Integer.MIN_VALUE : mHealthInfo.batteryChargeCounterUah;
+             }
+         }
+ 
+         @Override
+         public int getBatteryFullCharge() {
+             synchronized (mLock) {
+-                return mHealthInfo.batteryFullChargeUah;
++                return mT380Target && !mT380Telemetry.ready ? Integer.MIN_VALUE : mHealthInfo.batteryFullChargeUah;
+             }
+         }
+ 
+diff --git a/services/core/java/com/android/server/adb/AdbDebuggingManager.java b/services/core/java/com/android/server/adb/AdbDebuggingManager.java
+index 1e3229c9e..da13e1a64 100644
+--- a/services/core/java/com/android/server/adb/AdbDebuggingManager.java
++++ b/services/core/java/com/android/server/adb/AdbDebuggingManager.java
+@@ -225,6 +225,8 @@ public class AdbDebuggingManager {
+         private Handler mHandler;
+ 
+         private boolean mConnected = false;
++        // Guarded by this. False only when neither USB nor Wi-Fi ADB is enabled.
++        private boolean mListeningEnabled = false;
+ 
+         @VisibleForTesting
+         AdbDebuggingThread() {
+@@ -236,6 +238,28 @@ public class AdbDebuggingManager {
+             mHandler = handler;
+         }
+ 
++        synchronized void setListeningEnabled(boolean enabled) {
++            if (mListeningEnabled == enabled) {
++                return;
++            }
++            mListeningEnabled = enabled;
++            if (enabled) {
++                notifyAll();
++            }
++        }
++
++        private void waitForListeningEnabledLocked() {
++            while (!mListeningEnabled) {
++                try {
++                    wait();
++                } catch (InterruptedException ignored) {
++                    // This thread has no interrupt-based stop path. Consuming the interrupt keeps
++                    // it parked instead of carrying the status into the retry sleep below.
++                    Slog.w(TAG, "Interrupted while waiting for ADB to be enabled");
++                }
++            }
++        }
++
+         @Override
+         public void run() {
+             Slog.d(TAG, "Entering thread");
+@@ -243,6 +267,7 @@ public class AdbDebuggingManager {
+                 try {
+                     synchronized (this) {
+                         mConnected = false;
++                        waitForListeningEnabledLocked();
+                         openSocketLocked();
+                         mConnected = true;
+                     }
+@@ -645,6 +670,7 @@ public class AdbDebuggingManager {
+         // AdbService/AdbDebuggingManager are always created but we only start the connection
+         // with adbd thread when it is actually needed.
+         private void ensureAdbDebuggingThreadAlive() {
++            mThread.setListeningEnabled(true);
+             if (!mThread.isAlive()) {
+                 mThread.start();
+ 
+@@ -654,6 +680,12 @@ public class AdbDebuggingManager {
+             }
+         }
+ 
++        private void pauseAdbDebuggingThreadIfUnused() {
++            if (!mAdbUsbEnabled && !mAdbWifiEnabled) {
++                mThread.setListeningEnabled(false);
++            }
++        }
++
+         public void handleMessage(Message msg) {
+ 
+             switch (msg.what) {
+@@ -669,6 +701,7 @@ public class AdbDebuggingManager {
+                         break;
+                     }
+                     mAdbUsbEnabled = false;
++                    pauseAdbDebuggingThreadIfUnused();
+                 }
+                 case MESSAGE_ADB_ALLOW -> {
+                     String key = (String) msg.obj;
+@@ -846,6 +879,7 @@ public class AdbDebuggingManager {
+                     mAdbNetworkMonitor.unregister();
+                     stopAdbdWifi();
+                     onAdbdWifiServerDisconnected(-1);
++                    pauseAdbDebuggingThreadIfUnused();
+                 }
+                 case MSG_ADBWIFI_ALLOW -> {
+                     if (mAdbWifiEnabled) {
+@@ -1370,7 +1404,8 @@ public class AdbDebuggingManager {
+      * When {@code enabled} is {@code true}, this allows ADB debugging and starts the ADB handler
+      * thread. When {@code enabled} is {@code false}, this disallows ADB debugging for the
+      * given @{code transportType}. See {@link IAdbTransport} for all available transport types. If
+-     * all transport types are disabled, the ADB handler thread will shut down.
++     * all transport types are disabled, the ADB connection thread parks until a transport is
++     * enabled again.
+      */
+     public void setAdbEnabled(boolean enabled, byte transportType) {
+         switch (transportType) {
+diff --git a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java
+index fb3e19f18..3d9ee1dba 100644
+--- a/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -1712,7 +1712,8 @@ public class PackageManagerService implements PackageSender, TestUtilityService
+                         () -> LocalServices.getService(UserManagerInternal.class)),
+                 (i, pm) -> new DisplayMetrics(),
+                 (i, pm) -> new PackageParser2(pm.mSeparateProcesses, i.getDisplayMetrics(),
+-                        new PackageCacher(pm.mCacheDir, pm.mPackageParserCallback),
++                        pm.mCacheDir == null ? null
++                                : new PackageCacher(pm.mCacheDir, pm.mPackageParserCallback),
+                         pm.mPackageParserCallback) /* scanningCachingPackageParserProducer */,
+                 (i, pm) -> new PackageParser2(pm.mSeparateProcesses, i.getDisplayMetrics(), null,
+                         pm.mPackageParserCallback) /* scanningPackageParserProducer */,
+diff --git a/services/core/java/com/android/server/power/hint/HintManagerService.java b/services/core/java/com/android/server/power/hint/HintManagerService.java
+index 9174855b6..958bc8dd4 100644
+--- a/services/core/java/com/android/server/power/hint/HintManagerService.java
++++ b/services/core/java/com/android/server/power/hint/HintManagerService.java
+@@ -333,6 +333,12 @@ public final class HintManagerService extends SystemService {
+             } catch (RemoteException e) {
+                 throw new IllegalStateException("Could not contact PowerHAL!", e);
+             }
++        } else {
++            // No Power HAL means no hints, headroom, or composition support.
++            // Keep the service available without inventing hardware capabilities.
++            mSupportInfo = new SupportInfo();
++            mSupportInfo.headroom = new SupportInfo.HeadroomSupportInfo();
++            mSupportInfo.compositionData = new SupportInfo.CompositionDataSupportInfo();
+         }
+         if (mSupportInfo.headroom.isCpuSupported) {
+             mCpuHeadroomCache = new HeadroomCache<>(2, mSupportInfo.headroom.cpuMinIntervalMillis);

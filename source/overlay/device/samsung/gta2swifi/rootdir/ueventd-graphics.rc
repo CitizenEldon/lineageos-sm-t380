@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Match app GPU read/write and ION read access from platform app.te. SELinux
+# gpu_device/ion_device rules still constrain domains; no policy is relaxed.
+/dev/graphics/fb0 0660 system graphics
+# The stock HWC service runs as system:graphics and drives its normal idle API.
+# Existing QCOM policy labels this exact node sysfs_graphics and permits HWC RW.
+/sys/devices/virtual/graphics/fb0 idle_time 0660 system graphics
+/dev/mdss_rotator 0660 system graphics
+/dev/kgsl-3d0 0666 system graphics
+/dev/ion 0664 system system
+/dev/input/event* 0660 root input
+
+# Wi-Fi helper needs only the existing read-only firmware trigger.
+/dev/wcnss_wlan 0440 root wifi
+
+# The backlight HAL owns the existing LCD brightness actuator.
+/sys/devices/platform/soc/1a00000.qcom,mdss_mdp/1a00000.qcom,mdss_mdp:qcom,mdss_fb_primary/leds/lcd-backlight brightness 0660 system system

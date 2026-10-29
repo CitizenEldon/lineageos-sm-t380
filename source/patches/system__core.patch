@@ -1,0 +1,159 @@
+diff --git a/healthd/BatteryMonitor.cpp b/healthd/BatteryMonitor.cpp
+index 465949e..5c85db2 100644
+--- a/healthd/BatteryMonitor.cpp
++++ b/healthd/BatteryMonitor.cpp
+@@ -16,6 +16,7 @@
+ 
+ #define LOG_TAG "healthd"
+ 
++#include "T380MeasuredTelemetry.h"
+ #include <healthd/healthd.h>
+ #include <healthd/BatteryMonitor.h>
+ 
+@@ -392,9 +393,30 @@ void BatteryMonitor::updateValues(void) {
+     else
+         mHealthInfo->batteryPresent = mBatteryDevicePresent;
+ 
+-    mHealthInfo->batteryLevel = mBatteryFixedCapacity
+-                                        ? mBatteryFixedCapacity
+-                                        : getIntField(mHealthdConfig->batteryCapacityPath);
++    // SM-T380 measured telemetry: errno is unknown, never measured empty.
++    // Exact published device path scopes this behavior; other devices unchanged.
++    const bool t380Measured = mHealthdConfig->batteryCapacityPath ==
++            String8("/sys/class/power_supply/t380-diag-gauge/capacity");
++    T380MeasuredTelemetry t380Telemetry;
++    bool t380Parsed = false;
++    if (t380Measured) {
++        std::string tuple;
++        struct timespec bootTime;
++        t380Parsed = readFromFile(String8(T380MeasuredTelemetry::PATH), &tuple) > 0 &&
++                clock_gettime(CLOCK_BOOTTIME, &bootTime) == 0 &&
++                t380Telemetry.parse(tuple.c_str(),
++                    static_cast<uint64_t>(bootTime.tv_sec) * 1000 + bootTime.tv_nsec / 1000000);
++        // Private transport sentinel is consumed by the scoped BatteryService before
++        // stats/broadcasts. Actual fresh zero remains UNSUPPORTED, as before.
++        mHealthInfo->batteryLevel = t380Parsed && t380Telemetry.valid
++                ? t380Telemetry.capacity : -1;
++        mHealthInfo->batteryCapacityLevel = t380Parsed && t380Telemetry.valid
++                ? BatteryCapacityLevel::UNSUPPORTED : BatteryCapacityLevel::UNKNOWN;
++    } else {
++        mHealthInfo->batteryLevel = mBatteryFixedCapacity
++                                            ? mBatteryFixedCapacity
++                                            : getIntField(mHealthdConfig->batteryCapacityPath);
++    }
+     mHealthInfo->batteryVoltageMillivolts = getIntField(mHealthdConfig->batteryVoltagePath) / 1000;
+ 
+     if (!mHealthdConfig->batteryCurrentNowPath.empty())
+@@ -446,14 +468,30 @@ void BatteryMonitor::updateValues(void) {
+             mBatteryFixedTemperature ? mBatteryFixedTemperature
+                                      : getIntField(mHealthdConfig->batteryTemperaturePath);
+ 
++    if (t380Measured) {
++        mHealthInfo->batteryPresent = true;
++        if (t380Parsed && t380Telemetry.valid) {
++            mHealthInfo->batteryVoltageMillivolts = t380Telemetry.voltageUv / 1000;
++            mHealthInfo->batteryCurrentMicroamps = t380Telemetry.currentUa;
++        }
++        mHealthInfo->batteryTemperatureTenthsCelsius =
++                t380Parsed && t380Telemetry.temperatureValid ? t380Telemetry.temperature : 0;
++    }
++
+     std::string buf;
+ 
+-    if (readFromFile(mHealthdConfig->batteryCapacityLevelPath, &buf) > 0)
++    if (!t380Measured &&
++        readFromFile(mHealthdConfig->batteryCapacityLevelPath, &buf) > 0)
+         mHealthInfo->batteryCapacityLevel = getBatteryCapacityLevel(buf.c_str());
+ 
+     if (readFromFile(mHealthdConfig->batteryStatusPath, &buf) > 0)
+         mHealthInfo->batteryStatus = getBatteryStatus(buf.c_str());
+ 
++    if (t380Measured) {
++        mHealthInfo->batteryStatus = t380Parsed && t380Telemetry.valid
++                ? static_cast<BatteryStatus>(t380Telemetry.status + 1) : BatteryStatus::UNKNOWN;
++    }
++
+     // Backward compatible with android.hardware.health V1
+     if (mBatteryHealthStatus < BatteryMonitor::BH_MARGINAL) {
+         if (readFromFile(mHealthdConfig->batteryHealthPath, &buf) > 0)
+@@ -724,9 +762,22 @@ status_t BatteryMonitor::getProperty(int id, struct BatteryProperty *val) {
+         break;
+ 
+     case BATTERY_PROP_CAPACITY:
+-        if (!mHealthdConfig->batteryCapacityPath.empty()) {
+-            val->valueInt64 =
+-                getIntField(mHealthdConfig->batteryCapacityPath);
++        if (mHealthdConfig->batteryCapacityPath ==
++                String8("/sys/class/power_supply/t380-diag-gauge/capacity")) {
++            std::string tuple;
++            struct timespec bootTime;
++            T380MeasuredTelemetry telemetry;
++            if (readFromFile(String8(T380MeasuredTelemetry::PATH), &tuple) > 0 &&
++                    clock_gettime(CLOCK_BOOTTIME, &bootTime) == 0 &&
++                    telemetry.parse(tuple.c_str(), static_cast<uint64_t>(bootTime.tv_sec) * 1000 +
++                        bootTime.tv_nsec / 1000000) && telemetry.valid) {
++                val->valueInt64 = telemetry.capacity;
++                ret = OK;
++            } else {
++                ret = NAME_NOT_FOUND; // Standard property-unavailable result, no fake zero.
++            }
++        } else if (!mHealthdConfig->batteryCapacityPath.empty()) {
++            val->valueInt64 = getIntField(mHealthdConfig->batteryCapacityPath);
+             ret = OK;
+         } else {
+             ret = NAME_NOT_FOUND;
+diff --git a/init/Android.bp b/init/Android.bp
+index 3e2fb07..7cfeb42 100644
+--- a/init/Android.bp
++++ b/init/Android.bp
+@@ -113,8 +113,26 @@ soong_config_module_type {
+     ],
+ }
+ 
++soong_config_module_type {
++    name: "t380_init_cc_defaults",
++    module_type: "cc_defaults",
++    config_namespace: "t380_init",
++    bool_variables: ["recovery_reboot_without_bcb"],
++    properties: ["cflags"],
++}
++
++t380_init_cc_defaults {
++    name: "t380_init_defaults",
++    soong_config_variables: {
++        recovery_reboot_without_bcb: {
++            cflags: ["-DT380_RECOVERY_REBOOT_WITHOUT_BCB"],
++        },
++    },
++}
++
+ libinit_cc_defaults {
+     name: "init_defaults",
++    defaults: ["t380_init_defaults"],
+     sanitize: {
+         misc_undefined: ["signed-integer-overflow"],
+     },
+diff --git a/init/reboot.cpp b/init/reboot.cpp
+index 559282e..2333572 100644
+--- a/init/reboot.cpp
++++ b/init/reboot.cpp
+@@ -1121,6 +1121,11 @@ void HandlePowerctlMessage(const std::string& command) {
+                                << err;
+                 }
+             } else if (reboot_target == "recovery") {
++#if defined(T380_RECOVERY_REBOOT_WITHOUT_BCB)
++                // SM-T380 has no configured standard misc/BCB device. Handle the
++                // recovery reason through RESTART2 after normal shutdown.
++                LOG(INFO) << "T380 recovery reboot uses kernel restart reason";
++#else
+                 bootloader_message boot = {};
+                 if (std::string err; !read_bootloader_message(&boot, &err)) {
+                     LOG(ERROR) << "Failed to read bootloader message: " << err;
+@@ -1134,6 +1139,7 @@ void HandlePowerctlMessage(const std::string& command) {
+                         return;
+                     }
+                 }
++#endif
+             } else if (std::find(cmd_params.begin(), cmd_params.end(), "quiescent") !=
+                        cmd_params.end()) {  // Quiescent can be either subreason or details.
+                 bootloader_message boot = {};

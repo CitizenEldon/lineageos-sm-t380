@@ -1,0 +1,35 @@
+diff --git a/packages/LineagePreferenceLib/java/lineageos/preference/ConstraintsHelper.java b/packages/LineagePreferenceLib/java/lineageos/preference/ConstraintsHelper.java
+index fd8caa6..2e091af 100644
+--- a/packages/LineagePreferenceLib/java/lineageos/preference/ConstraintsHelper.java
++++ b/packages/LineagePreferenceLib/java/lineageos/preference/ConstraintsHelper.java
+@@ -57,6 +57,9 @@ public class ConstraintsHelper {
+ 
+     private boolean mAvailable = true;
+ 
++    // Runtime/remote availability may narrow XML constraints, never override them.
++    private final boolean mConstraintsMet;
++
+     private boolean mVerifyIntent = true;
+ 
+     private int mSummaryMinLines = -1;
+@@ -71,7 +74,8 @@ public class ConstraintsHelper {
+         TypedArray a = context.getResources().obtainAttributes(attrs,
+                 R.styleable.lineage_SelfRemovingPreference);
+         mSummaryMinLines = a.getInteger(lineage_SelfRemovingPreference_minSummaryLines, -1);
+-        setAvailable(checkConstraints());
++        mConstraintsMet = checkConstraints();
++        setAvailable(true);
+         String replacesKey = a.getString(lineage_SelfRemovingPreference_replacesKey);
+         if (replacesKey != null && mAvailable) {
+             mReplacesKey = replacesKey.split("\\|");
+@@ -81,8 +85,8 @@ public class ConstraintsHelper {
+     }
+ 
+     public void setAvailable(boolean available) {
+-        mAvailable = available;
+-        if (!available) {
++        mAvailable = available && mConstraintsMet;
++        if (!mAvailable) {
+             Graveyard.get(mContext).addTombstone(mPref.getKey());
+         }
+     }

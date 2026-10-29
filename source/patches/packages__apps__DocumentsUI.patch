@@ -1,0 +1,263 @@
+diff --git a/src/com/android/documentsui/BaseActivity.java b/src/com/android/documentsui/BaseActivity.java
+index baffe6d..42de3f1 100644
+--- a/src/com/android/documentsui/BaseActivity.java
++++ b/src/com/android/documentsui/BaseActivity.java
+@@ -53,6 +53,7 @@ import androidx.appcompat.widget.ActionMenuView;
+ import androidx.appcompat.widget.Toolbar;
+ import androidx.core.view.WindowInsetsCompat;
+ import androidx.fragment.app.Fragment;
++import androidx.recyclerview.widget.RecyclerView;
+ 
+ import com.android.documentsui.AbstractActionHandler.CommonAddons;
+ import com.android.documentsui.Injector.Injected;
+@@ -68,6 +69,7 @@ import com.android.documentsui.base.UserId;
+ import com.android.documentsui.dirlist.AnimationView;
+ import com.android.documentsui.dirlist.AppsRowManager;
+ import com.android.documentsui.dirlist.DirectoryFragment;
++import com.android.documentsui.dirlist.DirectoryViewPool;
+ import com.android.documentsui.prefs.LocalPreferences;
+ import com.android.documentsui.prefs.PreferencesMonitor;
+ import com.android.documentsui.queries.CommandInterceptor;
+@@ -114,6 +116,13 @@ public abstract class BaseActivity
+     protected SortController mSortController;
+     protected ConfigStore mConfigStore;
+ 
++    private final DirectoryViewPool mDirectoryViewPool = new DirectoryViewPool();
++
++    /** Item views are shared only by directories in this activity and configuration. */
++    public RecyclerView.RecycledViewPool getDirectoryViewPool(State state) {
++        return mDirectoryViewPool.obtain(state, getResources().getConfiguration());
++    }
++
+     private final List<EventListener> mEventListeners = new ArrayList<>();
+     private final String mTag;
+ 
+diff --git a/src/com/android/documentsui/dirlist/DirectoryFragment.java b/src/com/android/documentsui/dirlist/DirectoryFragment.java
+index 85344a1..686da24 100644
+--- a/src/com/android/documentsui/dirlist/DirectoryFragment.java
++++ b/src/com/android/documentsui/dirlist/DirectoryFragment.java
+@@ -473,6 +473,9 @@ public class DirectoryFragment extends Fragment implements SwipeRefreshLayout.On
+                     @Override
+                     public void onViewRecycled(ViewHolder holder) {
+                         cancelThumbnailTask(holder.itemView);
++                        if (holder instanceof DocumentHolder) {
++                            ((DocumentHolder) holder).clearBindingEnvironment();
++                        }
+                     }
+                 });
+ 
+@@ -533,6 +536,10 @@ public class DirectoryFragment extends Fragment implements SwipeRefreshLayout.On
+             cancelThumbnailTask(view);
+         }
+ 
++        // Recycle the old directory before its listeners go away. swapAdapter preserves the
++        // activity pool; setAdapter(null) would clear it when the last adapter detaches.
++        mRecView.swapAdapter(null, true);
++
+         mModel.removeUpdateListener(mModelUpdateListener);
+         mModel.removeUpdateListener(mAdapter.getModelUpdateListener());
+         setPreDrawListenerEnabled(false);
+@@ -574,7 +581,8 @@ public class DirectoryFragment extends Fragment implements SwipeRefreshLayout.On
+ 
+         mAdapter = getModelBackedDocumentsAdapter();
+ 
+-        mRecView.setAdapter(mAdapter);
++        mRecView.setRecycledViewPool(mActivity.getDirectoryViewPool(mState));
++        mRecView.swapAdapter(mAdapter, true);
+ 
+         mLayout = new GridLayoutManager(getContext(), mColumnCount) {
+             @Override
+@@ -904,8 +912,17 @@ public class DirectoryFragment extends Fragment implements SwipeRefreshLayout.On
+     }
+ 
+     private void onDisplayStateChanged() {
++        final boolean modeChanged = mMode != mState.derivedMode;
+         updateLayout(mState.derivedMode);
+-        mRecView.setAdapter(mAdapter);
++        if (modeChanged) {
++            // Grid and list use the same type IDs for incompatible item layouts.
++            mRecView.setAdapter(null);
++            mRecView.setRecycledViewPool(mActivity.getDirectoryViewPool(mState));
++            mRecView.swapAdapter(mAdapter, true);
++        } else {
++            // Rebind display policy without discarding compatible item views.
++            mAdapter.notifyDataSetChanged();
++        }
+     }
+ 
+     /**
+@@ -1814,7 +1831,7 @@ public class DirectoryFragment extends Fragment implements SwipeRefreshLayout.On
+ 
+         @Override
+         public void initDocumentHolder(DocumentHolder holder) {
+-            holder.addKeyEventListener(mKeyListener);
++            holder.setKeyEventListener(mKeyListener);
+             holder.itemView.setOnFocusChangeListener(mFocusManager);
+         }
+ 
+diff --git a/src/com/android/documentsui/dirlist/DocumentHolder.java b/src/com/android/documentsui/dirlist/DocumentHolder.java
+index 8f479ab..17ec1c0 100644
+--- a/src/com/android/documentsui/dirlist/DocumentHolder.java
++++ b/src/com/android/documentsui/dirlist/DocumentHolder.java
+@@ -67,6 +67,9 @@ public abstract class DocumentHolder
+     protected @State.ActionType int mAction;
+     protected final ConfigStore mConfigStore;
+ 
++    // Replaced when a recycled item is bound by another directory in the same activity.
++    protected IconHelper mIconHelper;
++
+     // See #addKeyEventListener for details on the need for this field.
+     private KeyboardEventListener<DocumentItemDetails> mKeyEventListener;
+ 
+@@ -163,6 +166,20 @@ public abstract class DocumentHolder
+         mKeyEventListener = listener;
+     }
+ 
++    public void setKeyEventListener(KeyboardEventListener<DocumentItemDetails> listener) {
++        mKeyEventListener = listener;
++    }
++
++    void setIconHelper(IconHelper iconHelper) {
++        mIconHelper = iconHelper;
++    }
++
++    void clearBindingEnvironment() {
++        mKeyEventListener = null;
++        itemView.setOnFocusChangeListener(null);
++        itemView.setOnDragListener(null);
++    }
++
+     public boolean inDragRegion(MotionEvent event) {
+         return false;
+     }
+diff --git a/src/com/android/documentsui/dirlist/GridDirectoryHolder.java b/src/com/android/documentsui/dirlist/GridDirectoryHolder.java
+index 462430e..6e8002d 100644
+--- a/src/com/android/documentsui/dirlist/GridDirectoryHolder.java
++++ b/src/com/android/documentsui/dirlist/GridDirectoryHolder.java
+@@ -59,7 +59,6 @@ final class GridDirectoryHolder extends DocumentHolder {
+     private final ImageView mIconBadge;
+     private final View mIconLayout;
+ 
+-    private final IconHelper mIconHelper;
+ 
+     GridDirectoryHolder(
+             Context context, ViewGroup parent, IconHelper iconHelper, ConfigStore configStore) {
+diff --git a/src/com/android/documentsui/dirlist/GridDocumentHolder.java b/src/com/android/documentsui/dirlist/GridDocumentHolder.java
+index 1a6527a..5509e03 100644
+--- a/src/com/android/documentsui/dirlist/GridDocumentHolder.java
++++ b/src/com/android/documentsui/dirlist/GridDocumentHolder.java
+@@ -74,7 +74,6 @@ final class GridDocumentHolder extends DocumentHolder {
+     final @Nullable ImageView mSelectionCircle;
+     final ImageView mIconCheck;
+     final ImageView mIconBadge;
+-    final IconHelper mIconHelper;
+     // Null when useMaterial3 flag is ON.
+     final @Nullable View mIconLayout;
+     final View mPreviewIcon;
+diff --git a/src/com/android/documentsui/dirlist/GridPhotoHolder.java b/src/com/android/documentsui/dirlist/GridPhotoHolder.java
+index 6a4f765..39a88e3 100644
+--- a/src/com/android/documentsui/dirlist/GridPhotoHolder.java
++++ b/src/com/android/documentsui/dirlist/GridPhotoHolder.java
+@@ -58,7 +58,6 @@ final class GridPhotoHolder extends DocumentHolder {
+     private final ImageView mIconMimeLg;
+     private final ImageView mIconThumb;
+     private final ImageView mIconCheck;
+-    private final IconHelper mIconHelper;
+     private final View mPreviewIcon;
+     private final View mIconBadge;
+ 
+diff --git a/src/com/android/documentsui/dirlist/ListDocumentHolder.java b/src/com/android/documentsui/dirlist/ListDocumentHolder.java
+index e512ac5..e2eb793 100644
+--- a/src/com/android/documentsui/dirlist/ListDocumentHolder.java
++++ b/src/com/android/documentsui/dirlist/ListDocumentHolder.java
+@@ -79,7 +79,6 @@ final class ListDocumentHolder extends DocumentHolder {
+     private final View mIconLayout;
+     final View mPreviewIcon;
+ 
+-    private final IconHelper mIconHelper;
+     private final Lookup<String, String> mFileTypeLookup;
+     // This is used in as a convenience in our bind method.
+     private final DocumentInfo mDoc;
+diff --git a/src/com/android/documentsui/dirlist/ModelBackedDocumentsAdapter.java b/src/com/android/documentsui/dirlist/ModelBackedDocumentsAdapter.java
+index 28c424c..7906920 100644
+--- a/src/com/android/documentsui/dirlist/ModelBackedDocumentsAdapter.java
++++ b/src/com/android/documentsui/dirlist/ModelBackedDocumentsAdapter.java
+@@ -146,6 +146,10 @@ final class ModelBackedDocumentsAdapter extends DocumentsAdapter {
+ 
+     @Override
+     public void onBindViewHolder(DocumentHolder holder, int position) {
++        // A holder can come from a previous directory. Refresh helpers and listeners before
++        // touching its data so keyboard, focus and thumbnails use the current environment.
++        holder.setIconHelper(mIconHelper);
++        mEnv.initDocumentHolder(holder);
+         String modelId = mModelIds.get(position);
+         Cursor cursor = mEnv.getModel().getItem(modelId);
+         if (isUseMaterial3FlagEnabled()) {
+diff --git a/src/com/android/documentsui/sidebar/RootsAdapter.java b/src/com/android/documentsui/sidebar/RootsAdapter.java
+index df970be..8849616 100644
+--- a/src/com/android/documentsui/sidebar/RootsAdapter.java
++++ b/src/com/android/documentsui/sidebar/RootsAdapter.java
+@@ -29,6 +29,7 @@ import android.widget.ListView;
+ 
+ import com.android.documentsui.R;
+ 
++import java.util.ArrayList;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+@@ -47,17 +48,28 @@ class RootsAdapter extends ArrayAdapter<Item> {
+     // the next available id to associate with a new string id
+     private static long sNextAvailableId;
+ 
+-    private final OnDragListener mDragListener;
++    private OnDragListener mDragListener;
+ 
+     public RootsAdapter(
+             Activity activity,
+             List<Item> items,
+             OnDragListener dragListener) {
+-        super(activity, 0, items);
++        super(activity, 0, new ArrayList<>(items));
+ 
+         mDragListener = dragListener;
+     }
+ 
++
++    /** Rebind fresh roots without discarding the ListView's recyclable rows. */
++    public void replaceItems(List<Item> items, OnDragListener dragListener) {
++        final List<Item> freshItems = new ArrayList<>(items);
++        mDragListener = dragListener;
++        setNotifyOnChange(false);
++        clear();
++        addAll(freshItems);
++        notifyDataSetChanged();
++    }
++
+     @Override
+     public boolean hasStableIds() {
+         return true;
+diff --git a/src/com/android/documentsui/sidebar/RootsListViewHandler.kt b/src/com/android/documentsui/sidebar/RootsListViewHandler.kt
+index 7aa81f0..57f03b2 100644
+--- a/src/com/android/documentsui/sidebar/RootsListViewHandler.kt
++++ b/src/com/android/documentsui/sidebar/RootsListViewHandler.kt
+@@ -83,8 +83,18 @@ internal class RootsListViewHandler(private val listView: ListView) : RootsListH
+     val firstChild: View? = listView.getChildAt(0)
+     val offset = if (firstChild != null) firstChild.top - listView.paddingTop else 0
+     val originalItemCount = getItemCount()
+-    adapter = RootsAdapter(baseActivity, items, dragListener)
+-    listView.adapter = adapter
++    val currentAdapter = adapter
++    if (currentAdapter == null) {
++      adapter = RootsAdapter(baseActivity, items, dragListener)
++      listView.adapter = adapter
++    } else {
++      // Rebind fresh provider/profile data while retaining compatible row views.
++      listView.clearChoices()
++      currentAdapter.replaceItems(items, dragListener)
++      if (originalItemCount != getItemCount()) {
++        listView.setSelectionFromTop(0, 0)
++      }
++    }
+ 
+     // Recover the position.
+     if (originalItemCount == getItemCount()) {

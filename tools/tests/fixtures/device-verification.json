@@ -1,0 +1,44 @@
+{
+  "installed": {
+    "finalVerification": {
+      "system": {
+        "bytes": 3674210304,
+        "verified": true,
+        "deviceSha256": "351ac1a6ce3382ce020792e9e0c9201dbada28cb1a4a1fb2bf0c916054af8a47",
+        "schema": 1,
+        "verifiedUtc": "2026-10-13T14:07:43.7153240Z",
+        "offset": 0,
+        "deviceCountRaw": "-620756992",
+        "deviceBytes": 3674210304,
+        "deviceCountFormat": "signed32-normalized-to-uint32",
+        "deviceAttempted": true,
+        "pipelineExit": 0,
+        "countExit": 0,
+        "node": "/dev/block/mmcblk0p45",
+        "deviceOutput": "FORMAT=t380-final-sha256-v1\nPIPELINE_EXIT=0\nCOUNT_EXIT=0\nBYTES=-620756992\nDIGEST=351ac1a6ce3382ce020792e9e0c9201dbada28cb1a4a1fb2bf0c916054af8a47  -\nREAD_DIAGNOSTICS_BEGIN\n3504+0 records in\n3504+0 records out\n3674210304 bytes (3.4 G) copied, 329.923467 s, 11 M/s\nHASH_DIAGNOSTICS_BEGIN\nTEE_DIAGNOSTICS_BEGIN\nCOUNT_DIAGNOSTICS_BEGIN\nDIAGNOSTICS_END",
+        "expectedSha256": "351ac1a6ce3382ce020792e9e0c9201dbada28cb1a4a1fb2bf0c916054af8a47",
+        "method": "device-sha256",
+        "sha256": "351ac1a6ce3382ce020792e9e0c9201dbada28cb1a4a1fb2bf0c916054af8a47"
+      },
+      "boot": {
+        "bytes": 17326096,
+        "verified": true,
+        "deviceSha256": "e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48",
+        "schema": 1,
+        "verifiedUtc": "2026-10-13T14:07:48.8267410Z",
+        "offset": 0,
+        "deviceCountRaw": "17326096",
+        "deviceBytes": 17326096,
+        "deviceCountFormat": "nonnegative",
+        "deviceAttempted": true,
+        "pipelineExit": 0,
+        "countExit": 0,
+        "node": "/dev/block/mmcblk0p23",
+        "deviceOutput": "FORMAT=t380-final-sha256-v1\nPIPELINE_EXIT=0\nCOUNT_EXIT=0\nBYTES=17326096\nDIGEST=e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48  -\nREAD_DIAGNOSTICS_BEGIN\n4230+0 records in\n4230+0 records out\n17326080 bytes (17 M) copied, 1.561420 s, 11 M/s\n16+0 records in\n16+0 records out\n16 bytes (16 B) copied, 0.000525 s, 30 K/s\nHASH_DIAGNOSTICS_BEGIN\nTEE_DIAGNOSTICS_BEGIN\nCOUNT_DIAGNOSTICS_BEGIN\nDIAGNOSTICS_END",
+        "expectedSha256": "e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48",
+        "method": "device-sha256",
+        "sha256": "e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48"
+      }
+    }
+  }
+}

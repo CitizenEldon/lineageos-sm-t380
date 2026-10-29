@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "sourceFingerprint": {
+    "files": 79547,
+    "sha256": "35ddbc2bef63981a11d01e5e15e11be46ce3c1c404656d5a1318a1142ffc6010"
+  },
+  "upstreamUrl": "https://codeload.github.com/LineageOS/android_kernel_xiaomi_msm8937/tar.gz/704f6f08135c39728fcbe6f94b3956d911bb1801",
+  "baseRevision": "704f6f08135c39728fcbe6f94b3956d911bb1801",
+  "configurationSha256": "197269cea57640174b3aee2f327eb86143e8c8836372a8941dea4e46088e31e9",
+  "sourceEpoch": 1790527213,
+  "toolchainInAndroid": "prebuilts/clang/host/linux-x86/clang-r563880c",
+  "sourceCompilationPerformed": false,
+  "archiveSha256": "d85c69a9fc50585141f7d8865b97a7df4b56fbcd49aa1e951aed0d5947e969ff",
+  "archiveBytes": 211379322
+}

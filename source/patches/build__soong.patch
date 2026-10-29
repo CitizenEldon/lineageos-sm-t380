@@ -1,0 +1,13 @@
+diff --git a/ci_tests/ci_test_package_zip.go b/ci_tests/ci_test_package_zip.go
+index 7cd03c6..ee4dbb5 100644
+--- a/ci_tests/ci_test_package_zip.go
++++ b/ci_tests/ci_test_package_zip.go
+@@ -298,7 +298,7 @@ func extendBuilderCommand(ctx android.ModuleContext, m android.ModuleProxy, buil
+ 		}
+ 
+ 		f := strings.TrimPrefix(installedFile.String(), productOut+"/")
+-		if strings.HasPrefix(f, "out") {
++		if strings.HasPrefix(f, ctx.Config().OutDir()+"/") {
+ 			continue
+ 		}
+ 		if strings.HasPrefix(f, "system/") {

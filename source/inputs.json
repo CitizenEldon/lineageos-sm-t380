@@ -1,0 +1,374 @@
+{
+  "kernel": {
+    "url": "https://github.com/LineageOS/android_kernel_xiaomi_msm8937.git",
+    "base": "704f6f08135c39728fcbe6f94b3956d911bb1801",
+    "sourceHead": "0dee4443b2b6500a8808e5cb4696e407138a5ee2",
+    "sourceEpoch": 1790527213,
+    "toolchainInAndroid": "prebuilts/clang/host/linux-x86/clang-r563880c"
+  },
+  "patches": [
+    {
+      "path": "build/soong",
+      "base": "9aa045a2aef10b8089e32e847fed26d9aa3d61be",
+      "patch": "patches/build__soong.patch",
+      "sha256": "f295dffadf6471d2ad2ec510853ef6af3b4dbc1257cb5baf3c855839a332b1a4"
+    },
+    {
+      "path": "external/chromium-webview/patches",
+      "base": "c90965b7fc332c0f0fcb115dfcbfbda5fcc6381b",
+      "patch": "patches/external__chromium-webview__patches.patch",
+      "sha256": "3caea6852e17570b42d1d076c9447e856b0dda3a9891f213019374e31efdcddd"
+    },
+    {
+      "path": "frameworks/base",
+      "base": "c8e9a4a21efb16c923371a740b9c1c755d17ebb2",
+      "patch": "patches/frameworks__base.patch",
+      "sha256": "228e957d846f5056924534c7b4282ec50bf3dbacba6656e5dc400b21721fc594"
+    },
+    {
+      "path": "frameworks/native",
+      "base": "9568531f9be7ae65f260699811f32ec4e461de6e",
+      "patch": "patches/frameworks__native.patch",
+      "sha256": "4f4b1bce8e05d753e88a7390ff7498a954d4e90ed55e531fdcdc7ad76d40cffa"
+    },
+    {
+      "path": "lineage-sdk",
+      "base": "d6f6ca7092de541e90a5ec1edc69b9de141ffc94",
+      "patch": "patches/lineage-sdk.patch",
+      "sha256": "db09282c0ecb102496536fece52adcc7fd874751f104e061053287251b47c304"
+    },
+    {
+      "path": "packages/apps/DocumentsUI",
+      "base": "860ac584e6b4c8b99a9ba9777d4784e076bc9e5b",
+      "patch": "patches/packages__apps__DocumentsUI.patch",
+      "sha256": "8d7114bc9783e4dbb26eade5a4bdbd3f0bfd181e4c4d0668dc34754b3a95448c"
+    },
+    {
+      "path": "packages/apps/Jelly",
+      "base": "06801d4d69ceb5dadafe7fb4421eba29c5a6a075",
+      "patch": "patches/packages__apps__Jelly.patch",
+      "sha256": "9b6c304762be01f34144c076d599c5b1e1a21aa9944ff4c2c7b76a1c1602eeae"
+    },
+    {
+      "path": "packages/apps/Settings",
+      "base": "ecbe1adc3e207d8dc38c35571171ba9d886092f6",
+      "patch": "patches/packages__apps__Settings.patch",
+      "sha256": "1289029bad0319ea701c59d7273fe587bc4941713ab3408acf29add63cfb3781"
+    },
+    {
+      "path": "system/core",
+      "base": "0e96ff13d90df568ddd788bb02b3ddb6e3641528",
+      "patch": "patches/system__core.patch",
+      "sha256": "2c9552f2922b465020e75f7f39f0280d58b14c8518a7cc87e8b3b94cd1a5e4c0"
+    },
+    {
+      "path": "vendor/qcom/opensource/display",
+      "base": "74a5c56b6229dbe518b43cf781e4c52e1a5ecb71",
+      "patch": "patches/vendor__qcom__opensource__display.patch",
+      "sha256": "a3ab44a50a81b0e9ea5929b6d7fb331c075bff04d4674fc1a90cf68431a3aac5"
+    },
+    {
+      "path": "vendor/qcom/opensource/power",
+      "base": "4914c6f688938c2c2010ecace8bf12cf667a7062",
+      "patch": "patches/vendor__qcom__opensource__power.patch",
+      "sha256": "e062e6dc02a9e33a08fdb0fb1e696c5e70f14735a6bd2f19fb882e6df03269f7"
+    },
+    {
+      "path": "device/lineage/sepolicy",
+      "base": "0a9e75292f0ed1a83c31a311b1b32367a9faff75",
+      "patch": "patches/device__lineage__sepolicy.patch",
+      "sha256": "5c9ce7ca67e72e547a85fa1898e8100849a86aded29baf25f4b37433b22ea4f1"
+    },
+    {
+      "path": "device/qcom/sepolicy-legacy-um",
+      "base": "8204f3a2895517f82bcc76e69996e51d4ea820fc",
+      "patch": "patches/device__qcom__sepolicy-legacy-um.patch",
+      "sha256": "961e8f6cc3429705954bfb637db145faaffefaafdb7208fee9ec97fb6a279134"
+    },
+    {
+      "path": "packages/modules/adb",
+      "base": "e7ed41a85f5a0a8c9db0ed7ba21c6ebd277b5db6",
+      "patch": "patches/packages__modules__adb.patch",
+      "sha256": "eee4f1f4ce66b0bd71a20eae59d7a220ee7e589540e66ebd55f1f34c83f39b9c"
+    },
+    {
+      "path": "vendor/lineage",
+      "base": "10b4c2b95466d3772448634f3ee2159d0da46df5",
+      "patch": "patches/vendor__lineage.patch",
+      "sha256": "db9b9a269e42d63395d116afc58766e7ffcd94bc1394fdf488ce8bb662f2547c"
+    },
+    {
+      "path": "hardware/sony/timekeep",
+      "base": "07f619c12dd80052f865c51e5d8c77d860c68c64",
+      "patch": "patches/hardware__sony__timekeep.patch",
+      "sha256": "12c1d67d0f3bd6a48d704edd02c2daad82eb6f5c40383ea4eb400b6f3ca6c106"
+    },
+    {
+      "path": "kernel-build",
+      "base": "704f6f08135c39728fcbe6f94b3956d911bb1801",
+      "patch": "patches/kernel-build.patch",
+      "sha256": "e6c313fff336d3990cd7f8b86b7208f26747a453e833d082a1d10af458688f26"
+    }
+  ],
+  "binaryInputs": [
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/lib/modules/wlan.ko",
+      "bytes": 4536064,
+      "sha256": "da7c40e1cc7cb4b89c8bdb05a17df06c1ef9c731a602b6b24f75438f0384ebba",
+      "releasePath": "/vendor/lib/modules/wlan.ko"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b06",
+      "bytes": 3258056,
+      "sha256": "bd8654d097e374bb6eb3cba89169f2f83c7dfd3a69c380dbd63f3403ea6a5cc4",
+      "releasePath": "/vendor/firmware/wcnss.b06"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/libllvm-glnext.so",
+      "bytes": 9819396,
+      "sha256": "0e74e5e406858992899442530814ec58fdafac3bbbc956ab37895d36f5e2f2c9",
+      "releasePath": "/vendor/lib/libllvm-glnext.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/libCB.so",
+      "bytes": 2362032,
+      "sha256": "141731d9e8b74cca2e58b137556e15873c4817ef87f0c43b2597ab933d2e7030",
+      "releasePath": "/vendor/lib/libCB.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/libgsl.so",
+      "bytes": 1958704,
+      "sha256": "fd021d15e4069a15206c0397fdc5a5c2dab0b5f22467c9982d463befe9b3fbb5",
+      "releasePath": "/vendor/lib/libgsl.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/egl/libGLESv2_adreno.so",
+      "bytes": 2659260,
+      "sha256": "c4f0f7427bae8cebeafef1290a116452cae489f3f524920c7e0a51f88c06da7d",
+      "releasePath": "/vendor/lib/egl/libGLESv2_adreno.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/libllvm-glnext.so",
+      "bytes": 13644360,
+      "sha256": "8bb58c1d11c58de2564381884700e32cf2262f133d82471735128821815a8ee4",
+      "releasePath": "/vendor/lib64/libllvm-glnext.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/libCB.so",
+      "bytes": 3140184,
+      "sha256": "f9cf36f93935aab636e6ee2965058763b1976d08e4788fc2fd4dcd4f2ac7f20e",
+      "releasePath": "/vendor/lib64/libCB.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/libgsl.so",
+      "bytes": 2129904,
+      "sha256": "cdaf4984724606ef487e43133a555dc07c822626acd3ff24978fe24af522183b",
+      "releasePath": "/vendor/lib64/libgsl.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/egl/libGLESv2_adreno.so",
+      "bytes": 3744864,
+      "sha256": "0b4175064a8951450dfccd2cb8cddd0248178c3878ac6d908500de186947ae8c",
+      "releasePath": "/vendor/lib64/egl/libGLESv2_adreno.so"
+    },
+    {
+      "path": "device/samsung/gta2swifi/prebuilts/077/kernel",
+      "bytes": 15836260,
+      "sha256": "f51077855ee1989fa3caf9e56b61ebfccd852e836078bad6c2023e1c4dce3be2",
+      "fromBoot": "kernel"
+    },
+    {
+      "path": "device/samsung/gta2swifi/prebuilts/077/dt.img",
+      "bytes": 159744,
+      "sha256": "23718ac2ea6f76bfdf485053ff4f1765619d242bb2c4e830327a54b959fba78c",
+      "fromBoot": "qcdt"
+    },
+    {
+      "path": "external/chromium-webview/prebuilt/arm64/webview.apk",
+      "bytes": 257882217,
+      "sha256": "36052516c12d877e870d77780921bc24aba6e75915ff070515dd22aa8f945895",
+      "releasePath": "/product/app/webview/webview.apk",
+      "releaseSha256": "0e36c6429f8ffc14375ecf1dd3b14f61a8401f5a39d0fc460367c0d812c4a3c8",
+      "delta": "webview.bsdiff"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b10",
+      "bytes": 47624,
+      "sha256": "0276d94dc9974c5462cd1cb960999ab89aaa85e34097609cac38937bb38c470f",
+      "releasePath": "/vendor/firmware/wcnss.b10"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.mdt",
+      "bytes": 38044,
+      "sha256": "f999198d5aadb0126e447bc12c79651a10a83be97a8b4f39157f486a39b044cf",
+      "releasePath": "/vendor/firmware/wcnss.mdt"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b12",
+      "bytes": 143960,
+      "sha256": "63c01ca83b38ddd54fcb7ee9a58dbb380f707738e201becb21ea14b89e25d206",
+      "releasePath": "/vendor/firmware/wcnss.b12"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/regulatory.db",
+      "bytes": 6380,
+      "sha256": "2fb33ca0074db573e05ef7dd50bb45b63c0ff98b7e852e1105ebad536fae8e6b",
+      "releasePath": "/vendor/firmware/regulatory.db"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b00",
+      "bytes": 468,
+      "sha256": "5c3820b5a958dad37dd17ada8c3a8306484d6b2757cddf420add46b0b756f005",
+      "releasePath": "/vendor/firmware/wcnss.b00"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b04",
+      "bytes": 61440,
+      "sha256": "ebb04153ca4ba8020c066f9bd22a9f973bff0cfc95755087466c805d12657063",
+      "releasePath": "/vendor/firmware/wcnss.b04"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/regulatory.db.p7s",
+      "bytes": 1085,
+      "sha256": "c941c08f51c93e46722293b85631604c3740d86c3de0c75f79aef50d2e919179",
+      "releasePath": "/vendor/firmware/regulatory.db.p7s"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b01",
+      "bytes": 37576,
+      "sha256": "5369796b2ba23ba2c06e9765f27ac76e4f61be553acd7c969bafb482c43877f9",
+      "releasePath": "/vendor/firmware/wcnss.b01"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b02",
+      "bytes": 13280,
+      "sha256": "6744e75ef462f26db72849c79316cdc52495616432236fe0113f0b302db20ed0",
+      "releasePath": "/vendor/firmware/wcnss.b02"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b11",
+      "bytes": 655360,
+      "sha256": "ff6335069b6e140eb47149d847aea80bf7e2b06bd80ae9708aa382efb3ae21ee",
+      "releasePath": "/vendor/firmware/wcnss.b11"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wcnss.b09",
+      "bytes": 56,
+      "sha256": "d4817aa5497628e7c77e6b606107042bbba3130888c5f47a375e6179be789fbb",
+      "releasePath": "/vendor/firmware/wcnss.b09"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wlan/prima/WCNSS_wlan_dictionary.dat",
+      "bytes": 10419,
+      "sha256": "eeec95953c195b8761383e747f14394cde8f3d4e7aa237ee9bad248baf605f56",
+      "releasePath": "/vendor/firmware/wlan/prima/WCNSS_wlan_dictionary.dat"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wlan/prima/WCNSS_cfg.dat",
+      "bytes": 11514,
+      "sha256": "66d8aa043111f6bdce04cfb5c8d09d43f65f853506f996da357d89122e0ac1ae",
+      "releasePath": "/vendor/firmware/wlan/prima/WCNSS_cfg.dat"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin",
+      "bytes": 29816,
+      "sha256": "d0c4fc2a9b145045ae9f30cbfe472f8143df0050eacbc2f8ea9ab1d407f178d5",
+      "releasePath": "/vendor/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wlan/prima/WCNSS_qcom_cfg.ini",
+      "bytes": 11312,
+      "sha256": "d9cb65f6439991db6c2ef401103727f431bcb4ba2234dd5a4f9e4839bdc8665d",
+      "releasePath": "/vendor/firmware/wlan/prima/WCNSS_qcom_cfg.ini"
+    },
+    {
+      "path": "device/samsung/gta2swifi/wifi/payload/vendor/firmware/wlan/prima/grippower.info",
+      "bytes": 5,
+      "sha256": "eb1e198b308c7aba785be3ec24308fd9b66dd4228ed6647dd096e45e3ad45418",
+      "releasePath": "/vendor/firmware/wlan/prima/grippower.info"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/libadreno_utils.so",
+      "bytes": 59964,
+      "sha256": "4f004aa9eba5a701df0fe3e4d11eb0bce58fe00d64983cbe49fa397c10307f5d",
+      "releasePath": "/vendor/lib/libadreno_utils.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/egl/libGLESv1_CM_adreno.so",
+      "bytes": 186536,
+      "sha256": "c6a2e8b2ffcde6126ebc95e2836409ce07269d1e0b577ee4edae828a76c4d6df",
+      "releasePath": "/vendor/lib/egl/libGLESv1_CM_adreno.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/egl/eglSubDriverAndroid.so",
+      "bytes": 27840,
+      "sha256": "10f14a0dfee13d014ae7882695ede4dcf7953be2cbb973a26f3ac2be8203ab2a",
+      "releasePath": "/vendor/lib/egl/eglSubDriverAndroid.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib/egl/libEGL_adreno.so",
+      "bytes": 21536,
+      "sha256": "2bd130ab84ce6bc70b12c9232ca1fee05a1cb57f7cea780d0e4ad13be1ba5cb1",
+      "releasePath": "/vendor/lib/egl/libEGL_adreno.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/firmware/a300_pfp.fw",
+      "bytes": 1156,
+      "sha256": "b6e66400d46d52dc343d370b94362d564a765994bda47dc026961dd47a9ca7a9",
+      "releasePath": "/vendor/firmware/a300_pfp.fw"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/firmware/a300_pm4.fw",
+      "bytes": 9220,
+      "sha256": "f78c57e879e96a2c0ceeea31dbd30f7f1d4526f9c876e80481c654f08daaecd3",
+      "releasePath": "/vendor/firmware/a300_pm4.fw"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/libadreno_utils.so",
+      "bytes": 81376,
+      "sha256": "cede8beed4b1801c89a23aef5ed5d689060d5139aefa987265697934ef38a843",
+      "releasePath": "/vendor/lib64/libadreno_utils.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/libsdmextension.so",
+      "bytes": 360144,
+      "sha256": "c9fef375b7425dc619e4a107322401f58d7557f8504ef496e7e4f8ced76a8d66",
+      "releasePath": "/vendor/lib64/libsdmextension.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/libscalar.so",
+      "bytes": 37296,
+      "sha256": "25137b1b2b2ce0c76f4641062b9805b2d9a340b617c23154c592542e7587f4ad",
+      "releasePath": "/vendor/lib64/libscalar.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/egl/libGLESv1_CM_adreno.so",
+      "bytes": 233824,
+      "sha256": "3b4947e61b7e4faf34f5de7d414769a1744407b66538c53ef7deb7c332cd7ec7",
+      "releasePath": "/vendor/lib64/egl/libGLESv1_CM_adreno.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/egl/eglSubDriverAndroid.so",
+      "bytes": 48288,
+      "sha256": "3035453d19a2161eb3b64979c45a7cfdf3c0a71247165947e5b734a278e81f13",
+      "releasePath": "/vendor/lib64/egl/eglSubDriverAndroid.so"
+    },
+    {
+      "path": "vendor/samsung/gta2swifi/proprietary/vendor/lib64/egl/libEGL_adreno.so",
+      "bytes": 39864,
+      "sha256": "693812a39f725e3e852358a094aa7e9a21423d8dceb6c4d3d7f70634e15f858c",
+      "releasePath": "/vendor/lib64/egl/libEGL_adreno.so"
+    }
+  ],
+  "overlayEntries": 178,
+  "fingerprints": {
+    "kernel": {
+      "files": 79547,
+      "sha256": "35ddbc2bef63981a11d01e5e15e11be46ce3c1c404656d5a1318a1142ffc6010"
+    },
+    "uapi": {
+      "files": 79479,
+      "sha256": "7717ce7fe94e2e017da32c3e469cdfa84a49968c6998903e32d34d7dacc5c60b"
+    }
+  }
+}

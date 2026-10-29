@@ -1,0 +1,152 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* SM-T380 Rev05 display only. Include after diagnostic board overrides.
+ * Timings, commands, GPIOs and rail order match the captured live DT.
+ * Preserve inherited LCD rail direction/level until normal MDSS control.
+ * Cold enablement keeps the original rail order and delays.
+ */
+/ {
+    samsung_lcd_vdd: lcd-vdd-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "t380-lcd-vdd";
+        samsung,t380-preserve-lcd-rail;
+        gpio = <&tlmm 8 GPIO_ACTIVE_HIGH>;
+        enable-active-high;
+        pinctrl-names = "default";
+        pinctrl-0 = <&samsung_lcd_rails_default>;
+    };
+    samsung_lcd_vsp: lcd-vsp-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "t380-lcd-vsp";
+        samsung,t380-preserve-lcd-rail;
+        gpio = <&tlmm 87 GPIO_ACTIVE_HIGH>;
+        enable-active-high;
+    };
+};
+
+&tlmm {
+    samsung_lcd_rails_default: lcd-rails-default {
+        pins = "gpio8", "gpio87";
+        function = "gpio";
+        drive-strength = <2>;
+        bias-disable;
+    };
+    samsung_lcd_active: lcd-active {
+        pins = "gpio60";
+        function = "gpio";
+        drive-strength = <8>;
+        bias-disable;
+    };
+    samsung_lcd_sleep: lcd-sleep {
+        pins = "gpio60";
+        function = "gpio";
+        drive-strength = <2>;
+        bias-pull-down;
+    };
+};
+
+&mdss_mdp {
+    status = "okay";
+    samsung_t380_panel: ss_dsi_panel_S6D7AA0X11_TV080WXM_WXGA {
+        qcom,mdss-dsi-panel-name = "ss_dsi_panel_S6D7AA0X11_TV080WXM_WXGA";
+        qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+        qcom,mdss-dsi-panel-type = "dsi_video_mode";
+        qcom,mdss-dsi-panel-destination = "display_1";
+        qcom,mdss-dsi-panel-framerate = <0x3c>;
+        qcom,mdss-dsi-virtual-channel-id = <0x00>;
+        qcom,mdss-dsi-stream = <0x00>;
+        qcom,mdss-dsi-panel-width = <0x320>;
+        qcom,mdss-dsi-panel-height = <0x500>;
+        qcom,mdss-dsi-h-pulse-width = <0x08>;
+        qcom,mdss-dsi-h-back-porch = <0x90>;
+        qcom,mdss-dsi-h-front-porch = <0x24>;
+        qcom,mdss-dsi-h-sync-skew = <0x00>;
+        qcom,mdss-dsi-v-pulse-width = <0x0c>;
+        qcom,mdss-dsi-v-back-porch = <0x1c>;
+        qcom,mdss-dsi-v-front-porch = <0x1c>;
+        qcom,mdss-dsi-h-left-border = <0x00>;
+        qcom,mdss-dsi-h-right-border = <0x00>;
+        qcom,mdss-dsi-v-top-border = <0x00>;
+        qcom,mdss-dsi-v-bottom-border = <0x00>;
+        qcom,mdss-dsi-bpp = <0x18>;
+        qcom,mdss-dsi-underflow-color = <0xff>;
+        qcom,mdss-dsi-border-color = <0x00>;
+        qcom,mdss-dsi-on-command = [39 01 00 00 00 00 03 f0 5a 5a 39 01 00 00 00 00 03 f1 5a 5a 39 01 00 00 00 00 03 fc a5 a5 39 01 00 00 00 00 03 d0 00 10 39 01 00 00 00 00 04 c3 c7 00 29 39 01 00 00 00 00 02 b3 51 39 01 00 00 00 00 02 53 24 39 01 00 00 00 00 02 51 7f 39 01 00 00 00 00 02 c1 01 39 01 00 00 0a 00 06 f2 02 28 1c 98 24 05 01 00 00 78 00 02 11 00 39 01 00 00 00 00 03 f0 a5 a5 39 01 00 00 00 00 03 f1 a5 a5 39 01 00 00 00 00 03 fc 5a 5a];
+        qcom,mdss-dsi-off-command = [05 01 00 00 00 00 02 28 00 05 01 00 00 82 00 02 10 00];
+        qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+        qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+        qcom,mdss-dsi-h-sync-pulse = <0x00>;
+        qcom,mdss-dsi-bllp-eof-power-mode;
+        qcom,mdss-dsi-bllp-power-mode;
+        qcom,mdss-dsi-lane-0-state;
+        qcom,mdss-dsi-lane-1-state;
+        qcom,mdss-dsi-lane-2-state;
+        qcom,mdss-dsi-lane-3-state;
+        qcom,mdss-dsi-panel-timings = <0x871e1400 0x42461828 0x25030400>;
+        qcom,mdss-dsi-t-clk-post = <0x04>;
+        qcom,mdss-dsi-t-clk-pre = <0x1b>;
+        qcom,mdss-dsi-bl-min-level = <0x01>;
+        qcom,mdss-dsi-bl-max-level = <0x100>;
+        qcom,mdss-brightness-max-level = <0x100>;
+        qcom,mdss-dsi-dma-trigger = "trigger_sw";
+        qcom,mdss-dsi-mdp-trigger = "none";
+        qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+        qcom,mdss-dsi-reset-sequence = <0x01 0x05 0x00 0x01 0x01 0x14>;
+        qcom,mdss-pan-physical-width-dimension = <0x6c>;
+        qcom,mdss-pan-physical-height-dimension = <0xac>;
+        qcom,mdss-dsi-lp11-init;
+        qcom,mdss-dsi-init-delay-us = <0x4e20>;
+        qcom,mdss-dsi-force-clock-lane-hs = <0x01>;
+        qcom,mdss-dsi-traffic-mode = "burst_mode";
+        qcom,mdss-dsi-hbp-power-mode;
+        /* Samsung sends 0x29 after the first frame. Standard MDSS offers
+         * the same post-panel-on event and waits a vsync before sending. */
+        qcom,mdss-dsi-post-panel-on-command = [05 01 00 00 00 00 02 29 00];
+        qcom,mdss-dsi-bl-dcs-command-state = "dsi_hs_mode";
+        qcom,panel-supply-entries {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            qcom,panel-supply-entry@0 {
+                reg = <0>;
+                qcom,supply-name = "vddlcd";
+                qcom,supply-min-voltage = <0>;
+                qcom,supply-max-voltage = <0>;
+                qcom,supply-enable-load = <0>;
+                qcom,supply-disable-load = <0>;
+                qcom,supply-pre-off-sleep = <5>;
+            };
+            qcom,panel-supply-entry@1 {
+                reg = <1>;
+                qcom,supply-name = "vddlcd2";
+                qcom,supply-min-voltage = <1800000>;
+                qcom,supply-max-voltage = <1800000>;
+                qcom,supply-enable-load = <100000>;
+                qcom,supply-disable-load = <100>;
+                qcom,supply-pre-off-sleep = <5>;
+            };
+            qcom,panel-supply-entry@2 {
+                reg = <2>;
+                qcom,supply-name = "vsp";
+                qcom,supply-min-voltage = <0>;
+                qcom,supply-max-voltage = <0>;
+                qcom,supply-enable-load = <0>;
+                qcom,supply-disable-load = <0>;
+                qcom,supply-post-on-sleep = <30>;
+                qcom,supply-pre-off-sleep = <2>;
+            };
+        };
+    };
+};
+
+&mdss_dsi { status = "okay"; };
+&mdss_dsi0 {
+    status = "okay";
+    qcom,dsi-pref-prim-pan = <&samsung_t380_panel>;
+    qcom,platform-reset-gpio = <&tlmm 60 GPIO_ACTIVE_HIGH>;
+    pinctrl-names = "mdss_default", "mdss_sleep";
+    pinctrl-0 = <&samsung_lcd_active>;
+    pinctrl-1 = <&samsung_lcd_sleep>;
+    vddlcd-supply = <&samsung_lcd_vdd>;
+    vddlcd2-supply = <&pm8937_l15>;
+    vsp-supply = <&samsung_lcd_vsp>;
+};
+/* Touch remains absent pending FTS8 protocol/firmware port. */

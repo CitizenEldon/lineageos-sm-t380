@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* SM-T380 Rev05 FTS8 touch only. Include after the diagnostic board.
+ * GPIO/supply/controller facts match captured live.dtb and legacy fts8.
+ * No firmware filename: this driver never downloads firmware/calibration.
+ */
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+    samsung_touch_io: touch-io-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "t380-touch-io";
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <1800000>;
+        gpio = <&tlmm 91 GPIO_ACTIVE_HIGH>;
+        enable-active-high;
+        pinctrl-names = "default";
+        pinctrl-0 = <&samsung_touch_io_default>;
+    };
+    samsung_touch_avdd: touch-avdd-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "t380-touch-avdd";
+        regulator-min-microvolt = <3000000>;
+        regulator-max-microvolt = <3000000>;
+        gpio = <&tlmm 92 GPIO_ACTIVE_HIGH>;
+        enable-active-high;
+        pinctrl-names = "default";
+        pinctrl-0 = <&samsung_touch_avdd_default>;
+    };
+};
+
+&tlmm {
+    samsung_touch_io_default: touch-io-default {
+        pins = "gpio91";
+        function = "gpio";
+        drive-strength = <2>;
+        bias-disable;
+    };
+    samsung_touch_avdd_default: touch-avdd-default {
+        pins = "gpio92";
+        function = "gpio";
+        drive-strength = <2>;
+        bias-disable;
+    };
+    samsung_touch_irq_active: touch-irq-active {
+        pins = "gpio65";
+        function = "gpio";
+        drive-strength = <2>;
+        bias-disable;
+        input-enable;
+    };
+    samsung_touch_irq_sleep: touch-irq-sleep {
+        pins = "gpio65";
+        function = "gpio";
+        drive-strength = <2>;
+        bias-pull-down;
+        input-enable;
+    };
+};
+
+/* Live board keeps BLSP I2C mux selected in its sleep state. */
+&i2c_3_sleep {
+    mux { function = "blsp_i2c3"; };
+};
+
+&i2c_3 {
+    status = "okay";
+    qcom,clk-freq-out = <400000>;
+    touchscreen@49 {
+        compatible = "samsung,t380-fts8";
+        reg = <0x49>;
+        interrupt-parent = <&tlmm>;
+        interrupts = <65 IRQ_TYPE_LEVEL_LOW>;
+        avdd-supply = <&samsung_touch_avdd>;
+        iovdd-supply = <&samsung_touch_io>;
+        samsung,max-coordinates = <1600 2560>;
+        pinctrl-names = "default", "active", "sleep";
+        pinctrl-0 = <&samsung_touch_irq_sleep>;
+        pinctrl-1 = <&samsung_touch_irq_active>;
+        pinctrl-2 = <&samsung_touch_irq_sleep>;
+    };
+};

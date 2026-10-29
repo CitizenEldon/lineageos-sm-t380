@@ -1,0 +1,14 @@
+{
+  "installed-0.01.tar.gz": {
+    "bytes": 989544746,
+    "sha256": "87f83a6eb0eee98b73faf538a916a68d53f09582ac9dedad5a4b4f0f4e984027"
+  },
+  "kernel-source-0.01.tar.gz": {
+    "bytes": 211379322,
+    "sha256": "d85c69a9fc50585141f7d8865b97a7df4b56fbcd49aa1e951aed0d5947e969ff"
+  },
+  "rescue-recovery.img.gz": {
+    "bytes": 20526251,
+    "sha256": "ee014ab4f2dfbc13efe3c1f8a0f6ab5ae46da881bffe2078109b6a249327fafc"
+  }
+}

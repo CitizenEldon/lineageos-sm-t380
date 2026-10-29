@@ -1,0 +1,611 @@
+diff --git a/libs/renderengine/skia/SkiaRenderEngine.cpp b/libs/renderengine/skia/SkiaRenderEngine.cpp
+index daa0ecc..fe84059 100644
+--- a/libs/renderengine/skia/SkiaRenderEngine.cpp
++++ b/libs/renderengine/skia/SkiaRenderEngine.cpp
+@@ -50,6 +50,7 @@
+ #include <SkSurface.h>
+ #include <SkTileMode.h>
+ #include <android-base/stringprintf.h>
++#include <android-base/properties.h>
+ #include <common/FlagManager.h>
+ #include <common/trace.h>
+ #include <gui/FenceMonitor.h>
+@@ -600,7 +601,9 @@ sk_sp<SkShader> SkiaRenderEngine::createRuntimeEffectShader(
+         const auto& edgeExtensionEffect = parameters.layer.edgeExtensionEffect;
+         if (edgeExtensionEffect.hasEffect()) {
+             shader = mEdgeExtensionShaderFactory.createSkShader(shader, parameters.layer,
+-                                                                parameters.imageBounds);
++                                                                parameters.imageBounds,
++                                                                parameters.useLinearEdgeBlur,
++                                                                parameters.edgeBlurShader);
+         }
+     }
+ 
+@@ -1222,6 +1225,95 @@ void SkiaRenderEngine::drawLayersInternal(
+             SkRect imageBounds;
+             matrix.mapRect(&imageBounds, SkRect::Make(image->bounds()));
+ 
++            // The blur may use bilinear texel pairing even when the visible image
++            // uses nearest sampling. Keep its original image shader untouched.
++            // Normalizing extended layer bounds and inverting the texture matrix
++            // can leave a few ULPs of scale error in an otherwise unit translation.
++            // Bilinear sampling is continuous: permit only sub-1/4096-pixel drift
++            // over the whole image. Preserve the original content shader/matrix,
++            // and retain exact checks for discontinuous nearest sampling.
++            constexpr float kMaxLinearDrift = 1.f / 4096.f;
++            const bool linearTranslation = item.useTextureFiltering &&
++                    !matrix.hasPerspective() && matrix.getSkewX() == 0.f &&
++                    matrix.getSkewY() == 0.f &&
++                    std::abs(matrix.getScaleX() - 1.f) * image->width() <= kMaxLinearDrift &&
++                    std::abs(matrix.getScaleY() - 1.f) * image->height() <= kMaxLinearDrift;
++            bool useLinearEdgeBlur = (matrix.isTranslate() || linearTranslation) &&
++                            (item.isOpaque || item.usePremultipliedAlpha) &&
++                            imageTextureRef->colorType() == kRGBA_8888_SkColorType &&
++                            layerDataspace == ui::Dataspace::V0_SRGB &&
++                            (display.outputDataspace == ui::Dataspace::V0_SRGB ||
++                             display.outputDataspace == ui::Dataspace::UNKNOWN) &&
++                            !requiresLinearEffect && !layer.stretchEffect.hasEffect();
++            const bool edgeDiagnostics = layer.edgeExtensionEffect.hasEffect() &&
++                    android::base::GetBoolProperty("debug.renderengine.edge_diagnostics", false);
++            if (edgeDiagnostics) {
++                const auto& ctm = canvas->getTotalMatrix();
++                ALOGD("EdgeEligibility base=%d translate=%d opaque=%d premul=%d type=%d "
++                      "src=%x out=%x linear=%d stretch=%d filtering=%d bounds=[%.9g,%.9g,%.9g,%.9g] "
++                      "image=[%.9g,%.9g,%.9g,%.9g] matrix=[%.9g,%.9g,%.9g,%.9g,%.9g,%.9g] "
++                      "ctm=[%.9g,%.9g,%.9g,%.9g,%.9g,%.9g] edges=%d%d%d%d",
++                      useLinearEdgeBlur, matrix.isTranslate(), item.isOpaque,
++                      item.usePremultipliedAlpha, imageTextureRef->colorType(),
++                      static_cast<int>(layerDataspace), static_cast<int>(display.outputDataspace),
++                      requiresLinearEffect, layer.stretchEffect.hasEffect(), item.useTextureFiltering,
++                      bounds.rect().left(), bounds.rect().top(), bounds.rect().right(), bounds.rect().bottom(),
++                      imageBounds.left(), imageBounds.top(), imageBounds.right(), imageBounds.bottom(),
++                      matrix.getScaleX(), matrix.getSkewX(), matrix.getTranslateX(),
++                      matrix.getSkewY(), matrix.getScaleY(), matrix.getTranslateY(),
++                      ctm.getScaleX(), ctm.getSkewX(), ctm.getTranslateX(),
++                      ctm.getSkewY(), ctm.getScaleY(), ctm.getTranslateY(),
++                      layer.edgeExtensionEffect.extendsEdge(LEFT), layer.edgeExtensionEffect.extendsEdge(RIGHT),
++                      layer.edgeExtensionEffect.extendsEdge(TOP), layer.edgeExtensionEffect.extendsEdge(BOTTOM));
++            }
++            if (useLinearEdgeBlur && !item.useTextureFiltering) {
++                // Nearest sampling at an integer texel boundary is sensitive to the
++                // texture unit's coordinate rounding. Preserve the original shader
++                // for those ties, corners, and non-unit device pixel grids.
++                const auto& edges = layer.edgeExtensionEffect;
++                const bool horizontal = edges.extendsEdge(LEFT) || edges.extendsEdge(RIGHT);
++                const bool vertical = edges.extendsEdge(TOP) || edges.extendsEdge(BOTTOM);
++                SkMatrix textureToDevice;
++                textureToDevice.setConcat(canvas->getTotalMatrix(), matrix);
++                SkMatrix deviceToTexture;
++                const bool unitGrid = textureToDevice.rectStaysRect() &&
++                        std::abs(textureToDevice.getScaleX()) +
++                                std::abs(textureToDevice.getSkewX()) == 1.f &&
++                        std::abs(textureToDevice.getScaleY()) +
++                                std::abs(textureToDevice.getSkewY()) == 1.f &&
++                        textureToDevice.invert(&deviceToTexture);
++                const auto awayFromTexelBoundary = [](float coordinate) {
++                    const float phase = coordinate - std::floor(coordinate);
++                    constexpr float margin = 1.f / 64.f;
++                    return phase > margin && phase < 1.f - margin;
++                };
++                const SkPoint pixel = unitGrid ? deviceToTexture.mapPoint({0.5f, 0.5f})
++                                               : SkPoint{0.f, 0.f};
++                const bool horizontalSafe = horizontal && !vertical &&
++                        bounds.rect().top() >= 0 && bounds.rect().bottom() <= imageBounds.height() &&
++                        awayFromTexelBoundary(pixel.y()) &&
++                        (!edges.extendsEdge(LEFT) ||
++                         awayFromTexelBoundary(15.f - imageBounds.left())) &&
++                        (!edges.extendsEdge(RIGHT) ||
++                         awayFromTexelBoundary(imageBounds.width() - 15.f - imageBounds.left()));
++                const bool verticalSafe = vertical && !horizontal &&
++                        bounds.rect().left() >= 0 && bounds.rect().right() <= imageBounds.width() &&
++                        awayFromTexelBoundary(pixel.x()) &&
++                        (!edges.extendsEdge(TOP) ||
++                         awayFromTexelBoundary(15.f - imageBounds.top())) &&
++                        (!edges.extendsEdge(BOTTOM) ||
++                         awayFromTexelBoundary(imageBounds.height() - 15.f - imageBounds.top()));
++                useLinearEdgeBlur = unitGrid && (horizontalSafe || verticalSafe);
++                if (edgeDiagnostics) ALOGD("EdgeEligibility nearest=%d unit=%d horizontal=%d vertical=%d pixel=[%.9g,%.9g]",
++                        useLinearEdgeBlur, unitGrid, horizontalSafe, verticalSafe, pixel.x(), pixel.y());
++            }
++            sk_sp<SkShader> edgeBlurShader;
++            if (useLinearEdgeBlur && !item.useTextureFiltering &&
++                layer.edgeExtensionEffect.hasEffect()) {
++                edgeBlurShader = image->makeShader(SkTileMode::kClamp, SkTileMode::kClamp,
++                        SkSamplingOptions({SkFilterMode::kLinear, SkMipmapMode::kNone}), &matrix);
++            }
++
+             paint.setShader(createRuntimeEffectShader(RuntimeEffectShaderParameters{
+                     .shader = shader,
+                     .layer = layer,
+@@ -1232,6 +1324,8 @@ void SkiaRenderEngine::drawLayersInternal(
+                     .outputDataSpace = display.outputDataspace,
+                     .fakeOutputDataspace = fakeDataspace,
+                     .imageBounds = imageBounds,
++                    .useLinearEdgeBlur = useLinearEdgeBlur,
++                    .edgeBlurShader = edgeBlurShader,
+             }));
+ 
+             // Turn on dithering when dimming beyond this (arbitrary) threshold...
+diff --git a/libs/renderengine/skia/SkiaRenderEngine.h b/libs/renderengine/skia/SkiaRenderEngine.h
+index 26fab27..80ed553 100644
+--- a/libs/renderengine/skia/SkiaRenderEngine.h
++++ b/libs/renderengine/skia/SkiaRenderEngine.h
+@@ -181,6 +181,8 @@ private:
+         const ui::Dataspace outputDataSpace;
+         const ui::Dataspace fakeOutputDataspace;
+         const SkRect& imageBounds;
++        bool useLinearEdgeBlur = false;
++        sk_sp<SkShader> edgeBlurShader = nullptr;
+     };
+     sk_sp<SkShader> createRuntimeEffectShader(const RuntimeEffectShaderParameters&);
+ 
+diff --git a/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.cpp b/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.cpp
+index f82e72e..d563d8c 100644
+--- a/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.cpp
++++ b/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.cpp
+@@ -19,6 +19,8 @@
+ #include <SkRuntimeEffect.h>
+ #include <SkStream.h>
+ #include <SkString.h>
++#include <android-base/properties.h>
++#include <common/trace.h>
+ #include <com_android_graphics_libgui_flags.h>
+ #include "log/log_main.h"
+ 
+@@ -59,14 +61,123 @@ const SkString kEffectSource_EdgeExtensionEffect(R"(
+     }
+ )");
+ 
++const SkString kEffectSource_LinearEdgeExtensionEffect(R"(
++    uniform shader uContentTexture;
++    uniform vec2 uImgSize;
++    uniform vec2 uTextureOrigin;
++
++    // TODO(b/214232209) oobTolerance is temporary and will be removed when the scrollbar will be
++    // hidden during the animation
++    const float oobTolerance = 15;
++    const int blurRadius = 3;
++    const float blurArea = float((2 * blurRadius + 1) * (2 * blurRadius + 1));
++
++    // Seven bilinear samples cover eight texels per axis. Their weights are
++    // [1-f, 1, 1, 1, 1, 1, 1, f]. Pair adjacent weights to reconstruct the
++    // identical box kernel with four bilinear samples per axis (16 total).
++    vec4 boxBlur(vec2 p) {
++        vec2 f = fract(p - uTextureOrigin - vec2(3.5));
++        vec2 w0 = vec2(2) - f;
++        vec2 w3 = vec2(1) + f;
++        vec4 xs = vec4(-3 - f.x + 1 / w0.x, -0.5 - f.x,
++                        1.5 - f.x, 3 - f.x + f.x / w3.x);
++        vec4 ys = vec4(-3 - f.y + 1 / w0.y, -0.5 - f.y,
++                        1.5 - f.y, 3 - f.y + f.y / w3.y);
++        vec4 wx = vec4(w0.x, 2, 2, w3.x);
++        vec4 wy = vec4(w0.y, 2, 2, w3.y);
++        vec4 sumColors = vec4(0);
++        for (int i = 0; i < 4; i++) {
++            for (int j = 0; j < 4; j++) {
++                sumColors += wx[i] * wy[j] * uContentTexture.eval(p + vec2(xs[i], ys[j]));
++            }
++        }
++        return sumColors / 49;
++    }
++
++    vec4 main(vec2 coord) {
++        vec2 nearestTexturePoint = clamp(coord, vec2(0, 0), uImgSize);
++        if (coord == nearestTexturePoint) {
++            return uContentTexture.eval(coord);
++        } else {
++            vec2 samplePoint = nearestTexturePoint + oobTolerance * normalize(
++                                    nearestTexturePoint - coord);
++            return boxBlur(samplePoint);
++        }
++    }
++)");
++
++const SkString kEffectSource_NearestEdgeExtensionEffect(R"(
++    uniform shader uContentTexture;
++    uniform shader uBlurTexture;
++    uniform vec2 uImgSize;
++    uniform vec2 uTextureOrigin;
++    uniform vec2 uContentOffset;
++
++    // TODO(b/214232209) oobTolerance is temporary and will be removed when the scrollbar will be
++    // hidden during the animation
++    const float oobTolerance = 15;
++    const int blurRadius = 3;
++    const float blurArea = float((2 * blurRadius + 1) * (2 * blurRadius + 1));
++
++    // Seven nearest samples select seven whole texels. Snap to their centers,
++    // then combine adjacent pairs with fixed bilinear weights (2, 2, 2, 1).
++    vec4 boxBlur(vec2 p) {
++        vec2 center = floor(p - uTextureOrigin) + vec2(0.5) + uTextureOrigin;
++        vec4 positions = vec4(-2.5, -0.5, 1.5, 3.0);
++        vec4 weights = vec4(2, 2, 2, 1);
++        vec4 sumColors = vec4(0);
++        for (int i = 0; i < 4; i++) {
++            for (int j = 0; j < 4; j++) {
++                sumColors += weights[i] * weights[j] *
++                        uBlurTexture.eval(center + vec2(positions[i], positions[j]));
++            }
++        }
++        return sumColors / 49;
++    }
++
++    vec4 main(vec2 coord) {
++        vec2 nearestTexturePoint = clamp(coord, vec2(0, 0), uImgSize);
++        if (coord == nearestTexturePoint) {
++            return uContentTexture.eval(coord + uContentOffset);
++        } else {
++            vec2 samplePoint = nearestTexturePoint + oobTolerance * normalize(
++                                    nearestTexturePoint - coord);
++            return boxBlur(samplePoint);
++        }
++    }
++)");
++
+ EdgeExtensionShaderFactory::EdgeExtensionShaderFactory(RuntimeEffectManager& effectManager) {
+     mEffect = effectManager.mKnownEffects[kEdgeExtensionEffect];
++    auto [effect, error] = SkRuntimeEffect::MakeForShader(kEffectSource_LinearEdgeExtensionEffect);
++    LOG_ALWAYS_FATAL_IF(!effect, "Linear edge-extension shader: %s", error.c_str());
++    mLinearEffect = std::move(effect);
++    auto [nearestEffect, nearestError] =
++            SkRuntimeEffect::MakeForShader(kEffectSource_NearestEdgeExtensionEffect);
++    LOG_ALWAYS_FATAL_IF(!nearestEffect, "Nearest edge-extension shader: %s", nearestError.c_str());
++    mNearestEffect = std::move(nearestEffect);
+ }
+ 
+ sk_sp<SkShader> EdgeExtensionShaderFactory::createSkShader(const sk_sp<SkShader>& inputShader,
+                                                            const LayerSettings& layer,
+-                                                           const SkRect& imageBounds) const {
+-    SkRuntimeShaderBuilder builder = SkRuntimeShaderBuilder(mEffect);
++                                                           const SkRect& imageBounds, bool useLinearBoxBlur,
++                                                           const sk_sp<SkShader>& linearBlurShader) const {
++    const bool linear = useLinearBoxBlur &&
++            android::base::GetBoolProperty("debug.renderengine.linear_edge", true);
++    const bool nearest = linear && linearBlurShader != nullptr;
++    SFTRACE_NAME(nearest ? "EdgeExtensionNearest16"
++                        : linear ? "EdgeExtensionLinear16" : "EdgeExtension49");
++    SkRuntimeShaderBuilder builder =
++            SkRuntimeShaderBuilder(nearest ? mNearestEffect : linear ? mLinearEffect : mEffect);
++    if (linear) {
++        builder.uniform("uTextureOrigin") = SkPoint{imageBounds.left(), imageBounds.top()};
++    }
++    if (nearest) {
++        builder.child("uBlurTexture") = linearBlurShader;
++        // Keep explicit child sampling. A pass-through-only content child selects a
++        // different Skia coordinate optimization and can move nearest-sampled texels.
++        builder.uniform("uContentOffset") = SkPoint{0, 0};
++    }
+ 
+     builder.child("uContentTexture") = inputShader;
+     if (imageBounds.isEmpty()) {
+diff --git a/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.h b/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.h
+index dbfe0d0..bd4dc0e 100644
+--- a/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.h
++++ b/libs/renderengine/skia/filters/EdgeExtensionShaderFactory.h
+@@ -38,9 +38,12 @@ public:
+     EdgeExtensionShaderFactory(RuntimeEffectManager& effectManager);
+ 
+     sk_sp<SkShader> createSkShader(const sk_sp<SkShader>& inputShader, const LayerSettings& layer,
+-                                   const SkRect& imageBounds) const;
++                                   const SkRect& imageBounds, bool useLinearBoxBlur = false,
++                                   const sk_sp<SkShader>& linearBlurShader = nullptr) const;
+ 
+ private:
+     sk_sp<SkRuntimeEffect> mEffect;
++    sk_sp<SkRuntimeEffect> mLinearEffect;
++    sk_sp<SkRuntimeEffect> mNearestEffect;
+ };
+ } // namespace android::renderengine::skia
+diff --git a/libs/renderengine/tests/RenderEngineTest.cpp b/libs/renderengine/tests/RenderEngineTest.cpp
+index 06a0017..e8af80b 100644
+--- a/libs/renderengine/tests/RenderEngineTest.cpp
++++ b/libs/renderengine/tests/RenderEngineTest.cpp
+@@ -25,6 +25,7 @@
+ #include <com_android_graphics_surfaceflinger_flags.h>
+ #include <cutils/properties.h>
+ #include <gtest/gtest.h>
++#include <gui/GLConsumer.h>
+ #include <renderengine/ExternalTexture.h>
+ #include <renderengine/RenderEngine.h>
+ #include <renderengine/impl/ExternalTexture.h>
+@@ -36,6 +37,7 @@
+ 
+ #include <algorithm>
+ #include <chrono>
++#include <cmath>
+ #include <condition_variable>
+ #include <filesystem>
+ #include <fstream>
+@@ -1399,6 +1401,292 @@ INSTANTIATE_TEST_SUITE_P(PerRenderEngineType, RenderEngineTest,
+                                          std::make_shared<GaneshVkRenderEngineFactory>(),
+                                          std::make_shared<GraphiteVkRenderEngineFactory>()));
+ 
++namespace {
++class ScopedLinearEdgeProperty {
++public:
++    ScopedLinearEdgeProperty() { property_get("debug.renderengine.linear_edge", mPrevious, ""); }
++    ~ScopedLinearEdgeProperty() { property_set("debug.renderengine.linear_edge", mPrevious); }
++private:
++    char mPrevious[PROPERTY_VALUE_MAX];
++};
++} // namespace
++
++TEST_P(RenderEngineTest, drawLayers_edgeExtensionLinearPixels) {
++    if (!GetParam()->apiSupported()) GTEST_SKIP();
++    initializeRenderEngine();
++    ScopedLinearEdgeProperty restoreProperty;
++    const auto input = allocateSourceBuffer(96, 224);
++    uint8_t* pixels = nullptr;
++    ASSERT_EQ(NO_ERROR, input->getBuffer()->lock(GRALLOC_USAGE_SW_WRITE_OFTEN,
++                                                reinterpret_cast<void**>(&pixels)));
++    for (int y = 0; y < 224; y++) {
++        for (int x = 0; x < 96; x++) {
++            auto p = pixels + 4 * (y * input->getBuffer()->getStride() + x);
++            p[0] = (x * 11 + y * 3) % 160;
++            p[1] = (x * 5 + y * 13) % 160;
++            p[2] = ((x / 7 + y / 9) % 2) * 150;
++            p[3] = 192; // Valid premultiplied content with nontrivial alpha.
++        }
++    }
++    ASSERT_EQ(NO_ERROR, input->getBuffer()->unlock());
++    const auto readPixels = [&]() {
++        uint8_t* output = nullptr;
++        EXPECT_EQ(NO_ERROR, mBuffer->getBuffer()->lock(GRALLOC_USAGE_SW_READ_OFTEN,
++                                                       reinterpret_cast<void**>(&output)));
++        std::vector<uint8_t> result(DEFAULT_DISPLAY_WIDTH * DEFAULT_DISPLAY_HEIGHT * 4);
++        if (!output) return result;
++        for (int y = 0; y < DEFAULT_DISPLAY_HEIGHT; y++) {
++            std::copy_n(output + y * mBuffer->getBuffer()->getStride() * 4,
++                        DEFAULT_DISPLAY_WIDTH * 4,
++                        result.data() + y * DEFAULT_DISPLAY_WIDTH * 4);
++        }
++        EXPECT_EQ(NO_ERROR, mBuffer->getBuffer()->unlock());
++        return result;
++    };
++    DisplaySettings display;
++    display.physicalDisplay = fullscreenRect();
++    display.clip = fullscreenRect();
++    display.outputDataspace = ui::Dataspace::V0_SRGB;
++    LayerSettings background;
++    background.geometry.boundaries = fullscreenRect().toFloatRect();
++    background.source.solidColor = half3(0.2f, 0.3f, 0.1f);
++    background.sourceDataspace = ui::Dataspace::V0_SRGB;
++    background.alpha = 1.f;
++    for (int variant = 0; variant < 128; variant++) {
++        SCOPED_TRACE(variant);
++        display.outputDataspace = (variant & 32) ? ui::Dataspace::UNKNOWN
++                                                 : ui::Dataspace::V0_SRGB;
++        LayerSettings layer;
++        layer.geometry.boundaries = FloatRect(-16, -16, 112, 240);
++        layer.geometry.positionTransform = mat4::translate(vec4(16.25f, 16.5f, 0.f, 1.f));
++        if (variant & 1) {
++            layer.geometry.positionTransform *= mat4::rotate(0.07f, vec3(0.f, 0.f, 1.f));
++        }
++        layer.source.buffer.buffer = input;
++        layer.source.buffer.usePremultipliedAlpha = true;
++        layer.source.buffer.useTextureFiltering = (variant & 2) != 0;
++        layer.source.buffer.textureTransform = mat4::scale(vec4(128.f / 96.f, 256.f / 224.f, 1.f, 1.f));
++        if (variant & 64) {
++            // A scaled source must retain the original 49-read fallback.
++            layer.source.buffer.textureTransform *= mat4::scale(vec4(0.9f, 0.9f, 1.f, 1.f));
++        }
++        layer.sourceDataspace = ui::Dataspace::V0_SRGB;
++        layer.alpha = (variant & 4) ? 0.55f : 1.f;
++        layer.edgeExtensionEffect = EdgeExtensionEffect(true, true, true, true);
++        if (variant & 8) {
++            layer.geometry.roundedCornersRadii = gui::CornerRadii(13.f);
++            layer.geometry.roundedCornersCrop = layer.geometry.boundaries;
++        }
++        if (variant & 16) {
++            layer.colorTransform = kRemoveGreenAndMoveRedToGreenMat4;
++        }
++        ASSERT_EQ(0, property_set("debug.renderengine.linear_edge", "0"));
++        invokeDraw(display, {background, layer});
++        const auto expected = readPixels();
++        ASSERT_EQ(0, property_set("debug.renderengine.linear_edge", "1"));
++        invokeDraw(display, {background, layer});
++        const auto actual = readPixels();
++        int maxDifference = 0;
++        size_t mismatches = 0;
++        size_t interiorMismatches = 0;
++        size_t twoLevelDifferences = 0;
++        for (size_t i = 0; i < expected.size(); i++) {
++            const int difference = std::abs(int(expected[i]) - int(actual[i]));
++            maxDifference = std::max(maxDifference, difference);
++            const int x = (i / 4) % DEFAULT_DISPLAY_WIDTH;
++            const int y = (i / 4) / DEFAULT_DISPLAY_WIDTH;
++            const float dx = x + 0.5f - 16.25f;
++            const float dy = y + 0.5f - 16.5f;
++            const float angle = (variant & 1) ? 0.07f : 0.f;
++            const float localX = std::cos(angle) * dx + std::sin(angle) * dy;
++            const float localY = -std::sin(angle) * dx + std::cos(angle) * dy;
++            // Stay a pixel clear of the branch boundary and antialias coverage.
++            const bool interior = localX > 1 && localX < 95 && localY > 1 && localY < 223;
++            if (interior && difference != 0) interiorMismatches++;
++            if (difference == 2) {
++                twoLevelDifferences++;
++                if (twoLevelDifferences <= 4) {
++                    printf("EDGE_ROUNDING variant=%d x=%d y=%d channel=%zu local=(%.3f,%.3f) "
++                           "old=%d new=%d interior=%d\n", variant, x, y, i % 4, localX,
++                           localY, expected[i], actual[i], interior);
++                }
++            }
++            // The equivalent kernel is accumulated from quantized bilinear samples.
++            // Allow at most two output levels only in the extended edge region.
++            if (difference > 2) mismatches++;
++        }
++        EXPECT_EQ(0u, mismatches) << "max channel difference " << maxDifference;
++        EXPECT_EQ(0u, interiorMismatches);
++        printf("EDGE_INTERIOR variant=%d mismatches=%zu two_level=%zu\n", variant,
++               interiorMismatches, twoLevelDifferences);
++        printf("EDGE_PIXELS variant=%d max_diff=%d mismatches=%zu\n", variant,
++               maxDifference, mismatches);
++    }
++}
++
++TEST_P(RenderEngineTest, drawLayers_edgeExtensionLinearWindowPixels) {
++    if (!GetParam()->apiSupported()) GTEST_SKIP();
++    initializeRenderEngine();
++    ScopedLinearEdgeProperty restoreProperty;
++    constexpr int width = 800, height = 1280;
++    mBuffer = std::make_shared<impl::ExternalTexture>(
++            sp<GraphicBuffer>::make(width, height, HAL_PIXEL_FORMAT_RGBA_8888, 1,
++                                    GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN |
++                                            GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE,
++                                    "edge-window-pixels"),
++            *mRE, impl::ExternalTexture::Usage::READABLE | impl::ExternalTexture::Usage::WRITEABLE);
++    const auto input = allocateSourceBuffer(width, height);
++    uint8_t* pixels = nullptr;
++    ASSERT_EQ(NO_ERROR, input->getBuffer()->lock(GRALLOC_USAGE_SW_WRITE_OFTEN,
++                                                reinterpret_cast<void**>(&pixels)));
++    for (int y = 0; y < height; y++) {
++        for (int x = 0; x < width; x++) {
++            auto p = pixels + 4 * (y * input->getBuffer()->getStride() + x);
++            p[0] = (x * 11 + y * 3) % 160;
++            p[1] = (x * 5 + y * 13) % 160;
++            p[2] = ((x / 7 + y / 9) % 2) * 150;
++            p[3] = 192;
++        }
++    }
++    ASSERT_EQ(NO_ERROR, input->getBuffer()->unlock());
++    const auto readPixels = [&]() {
++        uint8_t* output = nullptr;
++        EXPECT_EQ(NO_ERROR, mBuffer->getBuffer()->lock(GRALLOC_USAGE_SW_READ_OFTEN,
++                                                       reinterpret_cast<void**>(&output)));
++        std::vector<uint8_t> result(width * height * 4);
++        if (!output) return result;
++        for (int y = 0; y < height; y++) {
++            std::copy_n(output + y * mBuffer->getBuffer()->getStride() * 4, width * 4,
++                        result.data() + y * width * 4);
++        }
++        EXPECT_EQ(NO_ERROR, mBuffer->getBuffer()->unlock());
++        return result;
++    };
++    DisplaySettings display;
++    display.physicalDisplay = Rect(width, height);
++    display.clip = Rect(width, height);
++    display.outputDataspace = ui::Dataspace::UNKNOWN;
++    LayerSettings background;
++    background.geometry.boundaries = FloatRect(0, 0, width, height);
++    background.source.solidColor = half3(0.2f, 0.3f, 0.1f);
++    background.sourceDataspace = ui::Dataspace::V0_SRGB;
++    background.alpha = 1.f;
++    const float shifts[] = {50.930927f, 24.053978f, 7.827278f, 0.029305f,
++                            0.f, 0.001f, -0.550964f, -89.346016f};
++    for (int variant = 0; variant < 224; variant++) {
++        SCOPED_TRACE(variant);
++        const bool extended = variant >= 32;
++        // Extra filtered cases keep full alpha so blending cannot hide an edge difference.
++        const bool fullAlphaFiltered = variant >= 160;
++        const int realVariant = fullAlphaFiltered ? (variant - 160) * 2
++                                                 : extended ? variant - 32 : variant;
++        const int edge = extended ? (realVariant / 4) % 4 : 0;
++        const float realShifts[] = {99.7161713f, 50.9309273f, 24.053978f, 7.827278f,
++                                    0.550964f, 0.1743927f, 0.f, 0.0293045f};
++        const float shift = extended ? realShifts[realVariant / 16] : shifts[variant / 4];
++        const float positionX = extended ? (edge == 0 ? shift : edge == 1 ? -shift : 0.f) : shift;
++        const float positionY = extended ? (edge == 2 ? shift : edge == 3 ? -shift : 0.f) : 0.f;
++        LayerSettings layer;
++        // Actual SurfaceFlinger keeps the full animation extension in layer bounds.
++        // Exercise both axes, filtering modes, alpha modes, and subpixel endpoints.
++        layer.geometry.boundaries = extended ? FloatRect(edge == 0 ? -113.f : 0.f,
++                edge == 2 ? -113.f : 0.f, width + (edge == 1 ? 113.f : 0.f),
++                height + (edge == 3 ? 113.f : 0.f))
++                : FloatRect(-shift, 0, width - shift, height);
++        layer.geometry.positionTransform = mat4::translate(vec4(positionX, positionY, 0.f, 1.f));
++        layer.source.buffer.buffer = input;
++        layer.source.buffer.isOpaque = (variant & 1) != 0;
++        layer.source.buffer.usePremultipliedAlpha = true;
++        layer.source.buffer.useTextureFiltering = fullAlphaFiltered || (extended && (variant & 2));
++        // Reproduce LayerFE's production texture transform, including GLConsumer and rounding.
++        float drawing[16];
++        GLConsumer::computeTransformMatrix(drawing, width, height, PIXEL_FORMAT_RGBA_8888,
++                                           Rect(width, height), 0, layer.source.buffer.useTextureFiltering);
++        const Rect win{layer.geometry.boundaries};
++        const mat4 tr = mat4::translate(vec4(.5f, .5f, 0.f, 1.f)) *
++                mat4::scale(vec4(1.f, -1.f, 1.f, 1.f)) *
++                mat4::translate(vec4(-.5f, -.5f, 0.f, 1.f)) *
++                mat4::translate(vec4(float(win.left) / width, float(win.top) / height, 0.f, 1.f)) *
++                mat4::scale(vec4(float(win.width()) / width, float(win.height()) / height, 1.f, 1.f));
++        layer.source.buffer.textureTransform = mat4(static_cast<const float*>(drawing)) * tr;
++        printf("EDGE_LAYERFE variant=%d matrix=[%.9g,%.9g,%.9g,%.9g]\n", variant,
++                layer.source.buffer.textureTransform[0][0], layer.source.buffer.textureTransform[1][1],
++                layer.source.buffer.textureTransform[3][0], layer.source.buffer.textureTransform[3][1]);
++        layer.sourceDataspace = ui::Dataspace::V0_SRGB;
++        layer.alpha = fullAlphaFiltered ? 1.f : (variant & 2) ? 0.55f : 1.f;
++        layer.edgeExtensionEffect = extended ? EdgeExtensionEffect(edge == 0, edge == 1,
++                edge == 2, edge == 3) : EdgeExtensionEffect(shift >= 0, shift < 0, false, false);
++        ASSERT_EQ(0, property_set("debug.renderengine.linear_edge", "0"));
++        invokeDraw(display, {background, layer});
++        const auto expected = readPixels();
++        ASSERT_EQ(0, property_set("debug.renderengine.linear_edge", "1"));
++        invokeDraw(display, {background, layer});
++        const auto actual = readPixels();
++        int maxDifference = 0;
++        size_t mismatches = 0, interiorMismatches = 0;
++        for (size_t i = 0; i < expected.size(); i++) {
++            const int difference = std::abs(int(expected[i]) - int(actual[i]));
++            maxDifference = std::max(maxDifference, difference);
++            const float localX = (i / 4) % width + 0.5f - positionX;
++            const float localY = (i / 4) / width + 0.5f - positionY;
++            if (localX > 1 && localX < width - 1 && localY > 1 && localY < height - 1 &&
++                difference != 0) interiorMismatches++;
++            if (difference > 2) {
++                if (mismatches < 3) printf("EDGE_WINDOW_DIFF variant=%d x=%zu y=%zu c=%zu old=%d new=%d\n",
++                        variant, (i / 4) % width, (i / 4) / width, i % 4, expected[i], actual[i]);
++                mismatches++;
++            }
++        }
++        EXPECT_EQ(0u, mismatches) << "max channel difference " << maxDifference;
++        EXPECT_EQ(0u, interiorMismatches);
++        printf("EDGE_WINDOW variant=%d shift=%.6f max_diff=%d mismatches=%zu interior=%zu\n",
++                variant, shift, maxDifference, mismatches, interiorMismatches);
++    }
++}
++
++TEST_P(RenderEngineTest, drawLayers_edgeExtensionLinearBenchmark) {
++    if (!GetParam()->apiSupported()) GTEST_SKIP();
++    initializeRenderEngine();
++    ScopedLinearEdgeProperty restoreProperty;
++    constexpr int width = 800, height = 1280;
++    mBuffer = std::make_shared<impl::ExternalTexture>(
++            sp<GraphicBuffer>::make(width, height, HAL_PIXEL_FORMAT_RGBA_8888, 1,
++                                    GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN |
++                                            GRALLOC_USAGE_HW_RENDER | GRALLOC_USAGE_HW_TEXTURE,
++                                    "edge-benchmark"),
++            *mRE, impl::ExternalTexture::Usage::READABLE | impl::ExternalTexture::Usage::WRITEABLE);
++    const auto input = allocateAndFillSourceBuffer(width, height, ubyte4(50, 100, 150, 255));
++    DisplaySettings display;
++    display.physicalDisplay = Rect(width, height);
++    display.clip = Rect(width, height);
++    display.outputDataspace = ui::Dataspace::UNKNOWN;
++    LayerSettings layer;
++    constexpr float shift = 50.930927f;
++    layer.geometry.boundaries = FloatRect(-113.f, 0, width, height);
++    layer.geometry.positionTransform = mat4::translate(vec4(shift, 0.f, 0.f, 1.f));
++    layer.source.buffer.buffer = input;
++    layer.source.buffer.isOpaque = true;
++    layer.source.buffer.useTextureFiltering = true;
++    // Captured extended-window texture transform; normalization produces a near-unit scale.
++    layer.source.buffer.textureTransform = mat4::translate(vec4(-113.f / width, 0.f, 0.f, 1.f)) *
++            mat4::scale(vec4(913.f / width, 1.f, 1.f, 1.f));
++    layer.sourceDataspace = ui::Dataspace::V0_SRGB;
++    layer.alpha = 1.f;
++    layer.edgeExtensionEffect = EdgeExtensionEffect(true, false, false, false);
++    for (int block = 0; block < 8; block++) {
++        const bool split = (block % 4 == 1 || block % 4 == 2); // ABBA twice.
++        ASSERT_EQ(0, property_set("debug.renderengine.linear_edge", split ? "1" : "0"));
++        for (int warmup = 0; warmup < 6; warmup++) invokeDraw(display, {layer});
++        for (int frame = 0; frame < 16; frame++) {
++            const auto start = std::chrono::steady_clock::now();
++            invokeDraw(display, {layer});
++            const double ms = std::chrono::duration<double, std::milli>(
++                    std::chrono::steady_clock::now() - start).count();
++            printf("EDGE_BENCH block=%d split=%d frame=%d ms=%.4f\n", block, split, frame, ms);
++        }
++    }
++}
++
+ TEST_P(RenderEngineTest, drawLayers_noLayersToDraw) {
+     if (!GetParam()->apiSupported()) {
+         GTEST_SKIP();

@@ -1,0 +1,17 @@
+This package contains unmodified Qualcomm Adreno proprietary binary software.
+The binaries retain their original proprietary licensing; this integration
+does not grant a redistribution license or relicense the binaries.
+
+Upstream binary repository:
+https://github.com/TheMuppets/proprietary_vendor_xiaomi_mithorium-common
+commit e264bd19f6158e9882efa1d7afe28e34bfd8ee4d
+The donor proprietary-files-qc-vndr.txt identifies unpinned graphics blobs as
+Nokia/Panther_00WW/PAN_sprout:11/RKQ1.200928.002/00WW_3_240:user/release-keys.
+This records donor provenance, not independently verified OEM extraction.
+No separate upstream license/notice file was present in the sparse donor tree.
+
+The two a300 firmware files come from the project's stock SM-T380 firmware
+extraction at artifacts/gpu-firmware, not the Nokia donor. They remain
+proprietary. SHA256 receipts identify their exact contents.
+
+New integration code is Apache-2.0 where marked with its SPDX identifier.

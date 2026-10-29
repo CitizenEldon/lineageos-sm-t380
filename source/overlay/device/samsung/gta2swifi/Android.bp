@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: Apache-2.0
+soong_namespace {}
+
+// Selected only by the full T380 product. The marker makes this deliberate
+// CTS compatibility deviation inspectable; it is not a signing trust claim.
+prebuilt_etc {
+    name: "t380-cts-shim-exclusion",
+    src: "release/cts-shim-exclusion.txt",
+    filename: "t380-cts-shim-exclusion.txt",
+    sub_dir: "security",
+    // Exclude both the APEX and its otherwise-restored standalone fallbacks.
+    // Standard module overrides apply after inherited product expansion.
+    overrides: [
+        "com.android.apex.cts.shim.v1_prebuilt",
+        "CtsShimPrebuilt",
+        "CtsShimPrivPrebuilt",
+    ],
+}
+
+cc_library_static {
+    name: "libt380_power_policy",
+    vendor: true,
+    defaults: ["android.hardware.power-ndk_shared"],
+    srcs: [
+        "power/GpuInteractionBoost.cpp",
+        "power/GpuInteractionPolicy.cpp",
+    ],
+    local_include_dirs: ["power"],
+    shared_libs: [
+        "libbase",
+        "liblog",
+    ],
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+    ],
+}

@@ -1,0 +1,10 @@
+# The AIDL Power HAL can traverse KGSL and modify only the separately labelled
+# min_pwrlevel actuator. It receives no general KGSL or devfreq write access.
+allow hal_power_default sysfs_kgsl:dir search;
+allow hal_power_default sysfs_kgsl:lnk_file r_file_perms;
+
+type t380_sysfs_gpu_min_pwrlevel, sysfs_type, fs_type;
+allow hal_power_default t380_sysfs_gpu_min_pwrlevel:file rw_file_perms;
+
+type t380_sysfs_gpu_policy_status, sysfs_type, fs_type;
+allow hal_power_default t380_sysfs_gpu_policy_status:file { getattr open read };

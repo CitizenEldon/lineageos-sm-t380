@@ -1,0 +1,3 @@
+# Append these exact rules to the full product's existing vendor ueventd.rc.
+# The helper only opens WCNSS read-only; do not grant general writable access.
+/dev/wcnss_wlan 0440 root wifi

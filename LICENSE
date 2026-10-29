@@ -1,0 +1,13 @@
+This repository contains components under multiple licenses.
+
+New public-distribution tools explicitly marked SPDX-License-Identifier:
+Apache-2.0 are provided under the Apache License, Version 2.0; see
+licenses/Apache-2.0.txt.
+
+Retained integration source, upstream source, patches, and the Linux kernel
+retain their existing notices and licenses. The complete kernel source
+archive includes its COPYING and LICENSES files.
+
+Proprietary binaries and firmware are not relicensed by this repository.
+See docs/LICENSING.md and the complete included Qualcomm firmware terms.
+No blanket open-source license applies to the compiled OS or recovery image.

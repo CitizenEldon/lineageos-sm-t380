@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "device": "gta2swifi",
+  "sequence": 36,
+  "source_receipt_sha256": "72c41492c325436cf5784e3ca617eb8b40bd01db69026b92722e7ae508c640d8",
+  "images": {
+    "system.img": {
+      "bytes": 3674210304,
+      "sha256": "351ac1a6ce3382ce020792e9e0c9201dbada28cb1a4a1fb2bf0c916054af8a47"
+    },
+    "boot.img": {
+      "bytes": 17326096,
+      "sha256": "e8b9e7be1e352b456cbf8994c3f139b3651e1c995e824cfad4c5ca3f04cb0e48"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+diff --git a/daemon/restart_service.cpp b/daemon/restart_service.cpp
+index 8934db3..70cd563 100644
+--- a/daemon/restart_service.cpp
++++ b/daemon/restart_service.cpp
+@@ -39,6 +39,11 @@ void restart_root_service(unique_fd fd) {
+         return;
+     }
+ 
++    if (!ANDROID_DEBUGGABLE && !__android_log_is_debuggable()) {
++        WriteFdExactly(fd.get(), "adbd cannot run as root in production builds\n");
++        return;
++    }
++
+ #if defined(__ANDROID__) && !defined(__ANDROID_RECOVERY__)
+     ndk::SpAIBinder binder = ndk::SpAIBinder(AServiceManager_getService("adbroot_service"));
+     std::shared_ptr<aidl::android::adbroot::IADBRootService> service =
+@@ -51,14 +56,7 @@ void restart_root_service(unique_fd fd) {
+ 
+ #if defined(__ANDROID__) && !defined(__ANDROID_RECOVERY__)
+     bool enabled = false;
+-    if (auto status = service->getEnabled(&enabled); !status.isOk()) {
+-#endif
+-    if (!ANDROID_DEBUGGABLE && !__android_log_is_debuggable()) {
+-        WriteFdExactly(fd.get(), "adbd cannot run as root in production builds\n");
+-        return;
+-    }
+-#if defined(__ANDROID__) && !defined(__ANDROID_RECOVERY__)
+-    }
++    (void)service->getEnabled(&enabled);
+     if (!enabled) {
+         WriteFdExactly(fd, "ADB Root access is disabled by system setting - "
+                 "enable in Settings -> System -> Developer options\n");

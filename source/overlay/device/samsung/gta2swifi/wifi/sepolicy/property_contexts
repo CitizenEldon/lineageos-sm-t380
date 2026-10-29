@@ -1,0 +1,2 @@
+vendor.t380.wifi.prepared u:object_r:vendor_t380_wifi_prepared_prop:s0 exact bool
+vendor.t380.wifi.identity_staged u:object_r:vendor_t380_wifi_identity_staged_prop:s0 exact bool

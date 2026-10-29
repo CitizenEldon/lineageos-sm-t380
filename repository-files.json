@@ -1,0 +1,926 @@
+{
+  ".gitattributes": {
+    "bytes": 301,
+    "sha256": "ae5069feb6c2a7e8cb7abb5789baa470ecbf4b5c0cc7aeda2523ea48a4449cbb"
+  },
+  ".github/workflows/verify.yml": {
+    "bytes": 1015,
+    "sha256": "2264810c696b57bf9f9ef05c9f283018197a5eb2026db199adc8207f091ce55d"
+  },
+  ".gitignore": {
+    "bytes": 134,
+    "sha256": "98bcb4c40133da9f4303f2cce92f404c6ed0356d7e03b1e0e386d640e20444e7"
+  },
+  "LICENSE": {
+    "bytes": 648,
+    "sha256": "82e0462434782f8a444dac81d86c15af32f0941406a1039164f629fbeb392b07"
+  },
+  "README.md": {
+    "bytes": 3522,
+    "sha256": "817650a5088433dadc67e0f8dc4ab138f8f437d3e84d3501c18d54fa67840e1d"
+  },
+  "docs/BUILDING.md": {
+    "bytes": 4311,
+    "sha256": "6f496e90feb2d7e3f5a0ba9137bef8ca2c40ca616d1d2e64988b1aac35d03289"
+  },
+  "docs/INSTALL.md": {
+    "bytes": 6548,
+    "sha256": "7ae9e6293cb6d4768b6f256eeb87fa882973f1171a20348d4d5d8c6ae2fd6259"
+  },
+  "docs/LICENSING.md": {
+    "bytes": 3366,
+    "sha256": "7959c184c365bbe3aa9034b6b97023402f1de56b71688b264f33e68b7958c6c6"
+  },
+  "docs/MAINTAINER.md": {
+    "bytes": 3121,
+    "sha256": "cb60885e199692f5e753b82fffa91ff670482c6c7230cabdc3c3875579d5d85e"
+  },
+  "docs/RELEASE-NOTES.md": {
+    "bytes": 980,
+    "sha256": "885721c44f38c467ab2781f81d7ff159d23b25e5d3658df904187777b74dd780"
+  },
+  "docs/VALIDATION.md": {
+    "bytes": 1802,
+    "sha256": "bcd293ce2ea0f9655153440c867039eeaee56a1955db5f7f93ae84e419149fd7"
+  },
+  "licenses/Apache-2.0.txt": {
+    "bytes": 11358,
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  "licenses/Linux-kernel-COPYING.txt": {
+    "bytes": 423,
+    "sha256": "ee5808b032a67f587d3541099d46de34f5bec8cd5976114ba07f1299ee6001ff"
+  },
+  "licenses/Qualcomm-NOTICE.txt": {
+    "bytes": 23966,
+    "sha256": "fa43e1b9a13b341a07adca9dbe73d0f9072d7966fdfe811c01f0dd2872d7309a"
+  },
+  "licenses/Qualcomm-firmware.txt": {
+    "bytes": 13962,
+    "sha256": "be904cd28cb292b80cdb6cf412ab0d9159d431671e987ad433c1f62e0988a9bc"
+  },
+  "release/assets.json": {
+    "bytes": 424,
+    "sha256": "ea2988a16fca48bf67aba45a5cdd870fde231bb481b8b8bb51867666bbcb78e7"
+  },
+  "release/kernel-source-verification.json": {
+    "bytes": 702,
+    "sha256": "1699eaaa56bf27e09d5f628514e99a5255b7083f7fe4b79444b66bffee10272e"
+  },
+  "release/preparation.json": {
+    "bytes": 1364,
+    "sha256": "18b6077e7fc688c1f0b2a33bd643f2e70bf9452e7a0b92a026f97a56e64f9fec"
+  },
+  "source/android.xml": {
+    "bytes": 286138,
+    "sha256": "af23598f99beb497141c083fc16887654b94478a0c8b3fbac8d43de853784790"
+  },
+  "source/inputs.json": {
+    "bytes": 15574,
+    "sha256": "1e4b32e41546ff6ac754b811e4765948f87da05f0cdc9845f879eacec61fdfc0"
+  },
+  "source/kernel.config": {
+    "bytes": 154446,
+    "sha256": "197269cea57640174b3aee2f327eb86143e8c8836372a8941dea4e46088e31e9"
+  },
+  "source/overlay.tar.gz": {
+    "bytes": 169727,
+    "sha256": "7b81f24c3d00648cbffd6fc39c92c583d586143d5dc06020579471de44c690d8"
+  },
+  "source/overlay/device/samsung/gta2swifi/.gitignore": {
+    "bytes": 48,
+    "sha256": "a06280952c5ed890199368b782bf9722d195ea1b865ad9dba8b8bfaf66817382"
+  },
+  "source/overlay/device/samsung/gta2swifi/Android.bp": {
+    "bytes": 1066,
+    "sha256": "0e51316e1017ce8b9662f8e997362fd62e77a2b86436c33d70543f21e16692cc"
+  },
+  "source/overlay/device/samsung/gta2swifi/AndroidProducts.mk": {
+    "bytes": 197,
+    "sha256": "5e276d16f30c4203e654dc866c249983e149d9d94311ad6f9791c6429fa106cf"
+  },
+  "source/overlay/device/samsung/gta2swifi/BoardConfig.mk": {
+    "bytes": 5003,
+    "sha256": "0295ae4408452888213d8749502070e1b9506e5c8a9bf429db1de1122c9cc5e8"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/Android.bp": {
+    "bytes": 220,
+    "sha256": "91507f4fb3e00ca4b93d8d40c527084b7e6ba70fc7573e898a21a72ddbcaf2e3"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/AndroidManifest.xml": {
+    "bytes": 1565,
+    "sha256": "21c2add1e389a8641bee9803e9cb34e1821af8f3b7a41c30aa5ab42220ea3527"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/src/st/barnes/t380/displayschedule/DailySchedule.java": {
+    "bytes": 2652,
+    "sha256": "3e6c7b64d747ae47c9524607e7250532e452564167c1636b010f3c9131f4771f"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/src/st/barnes/t380/displayschedule/FailureCleanup.java": {
+    "bytes": 1283,
+    "sha256": "33fb9705d0553b66c5c5510e668e660506c8b43d0e8ba0095769ca069c5e58ba"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/src/st/barnes/t380/displayschedule/PreferenceTimeoutStore.java": {
+    "bytes": 1160,
+    "sha256": "bfe4e3fa12fd2c166b3c3018e36b26138e94d8c4584fa25aa49e260cb4c85bfd"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/src/st/barnes/t380/displayschedule/ScheduleApplication.java": {
+    "bytes": 7807,
+    "sha256": "47d34add694498d4be98bb870403766f06846f6faec0a0a0b488c1a92cc1b468"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/src/st/barnes/t380/displayschedule/ScheduleReceiver.java": {
+    "bytes": 369,
+    "sha256": "d2e385ce0cf26d30d5acdb9fa6d496b1aa706f3a917526eb54c454f046d9e029"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/src/st/barnes/t380/displayschedule/SettingsActivity.java": {
+    "bytes": 3229,
+    "sha256": "6599ba1020600ea2718547997a0fb77d10c2a0ac03d0527cbab200f26f72b8bd"
+  },
+  "source/overlay/device/samsung/gta2swifi/apps/T380DisplaySchedule/src/st/barnes/t380/displayschedule/TimeoutOwnership.java": {
+    "bytes": 2263,
+    "sha256": "591ca91664a467aefd56ffe7faa6a2946793e007a93aa1777dae8a5fcabefd93"
+  },
+  "source/overlay/device/samsung/gta2swifi/audio/audio_policy_configuration.xml": {
+    "bytes": 1060,
+    "sha256": "1ca9cd1947d830afa4b487e49836e896e2b251f914eb13810a54b4df56d2bef2"
+  },
+  "source/overlay/device/samsung/gta2swifi/audio/product.mk": {
+    "bytes": 647,
+    "sha256": "874059de1a4eb56aea9a692e6f59c085d55426bc75e28f70369b2735f6c339ac"
+  },
+  "source/overlay/device/samsung/gta2swifi/audio/t380-audio-stub.xml": {
+    "bytes": 375,
+    "sha256": "1f6cd74d41e8f6f477a6048a2a9b43ab829ad2a9472f0fb45b10e0139c26ea0f"
+  },
+  "source/overlay/device/samsung/gta2swifi/bootimg.mk": {
+    "bytes": 726,
+    "sha256": "2ef84c1b25f556322c73ad23c7b589dbb219f2e67cf5909a2a6af7d51d55e724"
+  },
+  "source/overlay/device/samsung/gta2swifi/device.mk": {
+    "bytes": 3289,
+    "sha256": "d00e50d0718f3c1c0aca804cb22a4926f4ad71b1a83ad9f96fe8d62a01318cb5"
+  },
+  "source/overlay/device/samsung/gta2swifi/keylayout/gpio-keys.kl": {
+    "bytes": 1666,
+    "sha256": "8bcf8eb3268fb21ec0aa7bddcd6f7953abc4e3bc903bc6dea3548e8c2acd6ba5"
+  },
+  "source/overlay/device/samsung/gta2swifi/keylayout/sec_touchscreen.kl": {
+    "bytes": 148,
+    "sha256": "03a855c077d3e98198779a02f9f8de8cfdb38ea372d1296b2e6f1fd6a5f59513"
+  },
+  "source/overlay/device/samsung/gta2swifi/lights/Android.bp": {
+    "bytes": 398,
+    "sha256": "ce2241d8763f6d12a48a9ba68182a9d4ead7fe0a67971d2c95c989204150592f"
+  },
+  "source/overlay/device/samsung/gta2swifi/lights/Backlight.cpp": {
+    "bytes": 1645,
+    "sha256": "81986450faeb4e7c2ea9d58d3554f6cfb96c7732f83cf3857cd99cd0bfb9eaf7"
+  },
+  "source/overlay/device/samsung/gta2swifi/lights/Backlight.h": {
+    "bytes": 279,
+    "sha256": "2c2276bd87792206bdfc19a22beebad0eae17f3367fe61dff2b74e5c4212cd75"
+  },
+  "source/overlay/device/samsung/gta2swifi/lights/lights-t380.rc": {
+    "bytes": 186,
+    "sha256": "1ac821b79960286ee6361c98cb1785c1b8890065f38d085641b14a89e359b83d"
+  },
+  "source/overlay/device/samsung/gta2swifi/lights/lights-t380.xml": {
+    "bytes": 200,
+    "sha256": "202fd854aaa7d849d900c16501a30cd626b46a9b306415d4c0c13c36dacd85d2"
+  },
+  "source/overlay/device/samsung/gta2swifi/lights/service.cpp": {
+    "bytes": 3095,
+    "sha256": "3f8723d77417a4506e79a8faecf09f450a9970bcae1c251144331ce5e07b0755"
+  },
+  "source/overlay/device/samsung/gta2swifi/lineage.dependencies": {
+    "bytes": 3,
+    "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+  },
+  "source/overlay/device/samsung/gta2swifi/lineage_gta2swifi.mk": {
+    "bytes": 3479,
+    "sha256": "828f7586a5c203ef504bd83e1be5ca5f646533c1ce78ce5ae98aae4cc956d4fe"
+  },
+  "source/overlay/device/samsung/gta2swifi/lineage_gta2swifi_shell.mk": {
+    "bytes": 1180,
+    "sha256": "42513f0279af6c9e493e6b611f7178d81a5d90b9be5c0777bb8f1814d9092e38"
+  },
+  "source/overlay/device/samsung/gta2swifi/manifest-graphics-runtime.xml": {
+    "bytes": 410,
+    "sha256": "be8417df5b1c1650063cc7013814075ccbea617daf9f9db339153b83143ef7e3"
+  },
+  "source/overlay/device/samsung/gta2swifi/manifest-shell.xml": {
+    "bytes": 57,
+    "sha256": "2fb7e65ac5df24aac9d3eca9594d185272ab8ccac38c98056c1f36f1ba242a47"
+  },
+  "source/overlay/device/samsung/gta2swifi/manifest.xml": {
+    "bytes": 622,
+    "sha256": "96d815fe89650d46f974f293aefc6e74eb5c2e0dd62a5c05bbf3c94398cfa132"
+  },
+  "source/overlay/device/samsung/gta2swifi/native-shell.mk": {
+    "bytes": 1980,
+    "sha256": "3dd4a2ad9a2ef92d88de1e34ca7a993010803cadb72fb5063ceaa91586ca7aa4"
+  },
+  "source/overlay/device/samsung/gta2swifi/overlay/frameworks/base/packages/SystemUI/res/values/dimens.xml": {
+    "bytes": 238,
+    "sha256": "8c850d1a1de5487158186e89d677510633252aeaf58a0ee5cd7a9005433eba20"
+  },
+  "source/overlay/device/samsung/gta2swifi/power/GpuInteractionBoost.cpp": {
+    "bytes": 4142,
+    "sha256": "aff3c5fa6318fe6c51fb2d74fd89b4dfe8650cde4991ffe8418a04686488fb36"
+  },
+  "source/overlay/device/samsung/gta2swifi/power/GpuInteractionPolicy.cpp": {
+    "bytes": 4685,
+    "sha256": "abdc985d5cd8b251876c21e6714a2beb1ca4380c5c7df0cd66133f1a94acf2e6"
+  },
+  "source/overlay/device/samsung/gta2swifi/power/GpuInteractionPolicy.h": {
+    "bytes": 1767,
+    "sha256": "a3cb0b0a1d0eaa3bf8603d4bc0e3d9012af1af45abb45701753e7706fa642915"
+  },
+  "source/overlay/device/samsung/gta2swifi/prebuilts/077/receipt.json": {
+    "bytes": 542,
+    "sha256": "42d7f271d7a36c62f5a686893c354b3ee20843c0372be63182b94836bb1e6e44"
+  },
+  "source/overlay/device/samsung/gta2swifi/product.prop": {
+    "bytes": 178,
+    "sha256": "d38223bed8baad4ad43b9e8627f2f437282cc972932c724c523d7b8a9f09aa91"
+  },
+  "source/overlay/device/samsung/gta2swifi/release/cts-shim-exclusion.txt": {
+    "bytes": 288,
+    "sha256": "6d4bbdf9251684b0000cdb54fb54276d4c8b28610ea8291d2ad2cece730b2cd5"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/00-t380-metadata.rc": {
+    "bytes": 503,
+    "sha256": "10f8665a97ac1fc5b047e85f849614dc4a3907e07631cd72a10a7d12d79b1110"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/fstab.qcom": {
+    "bytes": 571,
+    "sha256": "fa30c2e8f190d1b2d0a83da45eed54911594bbe4380b06deabfdb702e7ba49db"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/fstab.t380-zram": {
+    "bytes": 262,
+    "sha256": "08aae5701c107eab0a6eb3c3434d1b2fff17b7868de42953b6181b79fb72b6ba"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/init.qcom.rc": {
+    "bytes": 5542,
+    "sha256": "22b4a09b842bb7f5e6675c78fa85b2947b221da6466d62034c70201c8fe8def4"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/init.t380-gpu-power.rc": {
+    "bytes": 487,
+    "sha256": "5f96c13d79aaf9d63311bd47802257184417f38a0d54ab70c3dfbc5f5d2978a3"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/t380-development-awake.rc": {
+    "bytes": 511,
+    "sha256": "4ef1abd3b15c6c589cb4b056c32a1dad1f051dc5c5b37d76c550d89a5d52590c"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/t380-development-usb.rc": {
+    "bytes": 285,
+    "sha256": "ab3ab2d20d2600ae806d1639066c9e586b61416fbcb7136fa45f0ca296e0c34a"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/t380-usb-adbd-lifecycle.rc": {
+    "bytes": 431,
+    "sha256": "8db66dc7b599750f54ee59ab2673bf8a64b4b1c22e6ebbccda2b9b787398eee2"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/t380-zram.rc": {
+    "bytes": 364,
+    "sha256": "c6fdc2e812b98979b18e2eb503344457e40f203a945a2994774a67b3efe6ee1d"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/ueventd-graphics.rc": {
+    "bytes": 896,
+    "sha256": "d0e1984dfa3477ea9be1847e8ca58af1cf74dd8ecf5523aef5c6539b25c16e39"
+  },
+  "source/overlay/device/samsung/gta2swifi/rootdir/ueventd.rc": {
+    "bytes": 174,
+    "sha256": "865ff0a7c428fd618b0393ce8dbf1c8ef1df52f92de1af0628390064a69d014f"
+  },
+  "source/overlay/device/samsung/gta2swifi/sepolicy/system_ext/private/genfs_contexts": {
+    "bytes": 234,
+    "sha256": "aa45ba6405242e34836573f469833362b9c2b570f145338c8af99edb77cef949"
+  },
+  "source/overlay/device/samsung/gta2swifi/sepolicy/system_ext/private/t380_charge_sysfs.te": {
+    "bytes": 200,
+    "sha256": "2147256d1d8a67d1a7bd77167c2c41155ac63e806083c28aae3e4793c0f9c5af"
+  },
+  "source/overlay/device/samsung/gta2swifi/sepolicy/system_ext/private/t380_measured_telemetry.te": {
+    "bytes": 217,
+    "sha256": "c7429ec1210061b2393174dcaeb3ff2bde4b489e7d9ad4a830be5699607cff2d"
+  },
+  "source/overlay/device/samsung/gta2swifi/sepolicy/vendor/file_contexts": {
+    "bytes": 1137,
+    "sha256": "813805b968594ce60282d33683fbe56087460a342ac897d66848f1e2cb837c34"
+  },
+  "source/overlay/device/samsung/gta2swifi/sepolicy/vendor/genfs_contexts": {
+    "bytes": 1596,
+    "sha256": "b96aedb1a291cebadf920e718c6bdc160b02d3e8a72894e9649c5d55af3a1049"
+  },
+  "source/overlay/device/samsung/gta2swifi/sepolicy/vendor/t380_gpu_power.te": {
+    "bytes": 528,
+    "sha256": "9619ccd3707e1e7f4c56c6fbafa335bde85c09bbc2e26584dcb1b0a63587a331"
+  },
+  "source/overlay/device/samsung/gta2swifi/software-keymint/Android.bp": {
+    "bytes": 1129,
+    "sha256": "80b1e3731f70dea52a933aee350677dd702b65f23a5779e3f68e3b46ffe63de9"
+  },
+  "source/overlay/device/samsung/gta2swifi/software-keymint/SOURCE.json": {
+    "bytes": 1211,
+    "sha256": "cb3e27b5fa1530f5650808a2d83f963e1edc3197c3968b9ab30f7e5e644c15bd"
+  },
+  "source/overlay/device/samsung/gta2swifi/software-keymint/android.hardware.security.keymint-service.xml": {
+    "bytes": 400,
+    "sha256": "0b37e0d79b8994dda55937025ca44e7e211b28e52c5a203470651e286f5d7206"
+  },
+  "source/overlay/device/samsung/gta2swifi/software-keymint/android.hardware.security.secureclock-service.xml": {
+    "bytes": 191,
+    "sha256": "0da6d422d25853fe4286f53d718e9451b87a3a202d20b5f9b806c127ffeef5c0"
+  },
+  "source/overlay/device/samsung/gta2swifi/software-keymint/android.hardware.security.sharedsecret-service.xml": {
+    "bytes": 193,
+    "sha256": "f4e85774cd06fc4d355a6ce5e0be738e66d0420bfc0fae5de9b6f5fccacbfaf6"
+  },
+  "source/overlay/device/samsung/gta2swifi/software-keymint/service.cpp": {
+    "bytes": 2677,
+    "sha256": "4e88dda633247cb239cd683f2d748f62c79c022b87f558d8bb317c3092e1ed19"
+  },
+  "source/overlay/device/samsung/gta2swifi/software-keymint/t380-software-keymint.rc": {
+    "bytes": 138,
+    "sha256": "9d38a74e78bdc62b14dc7bc0e60e408c4a0766af9e2be9ead6e79cc7b8773f16"
+  },
+  "source/overlay/device/samsung/gta2swifi/tools/approved-kernels.json": {
+    "bytes": 10557,
+    "sha256": "90500fa90520826551bfb66257be820e90be5961069d761cc36bcd8dd29d1a06"
+  },
+  "source/overlay/device/samsung/gta2swifi/tools/package-boot.py": {
+    "bytes": 3237,
+    "sha256": "e6b5c81df4435469f0c4f7c734a15f466f865c4943d60bda2d3e15563e2d01a6"
+  },
+  "source/overlay/device/samsung/gta2swifi/tools/timekeep-fixes.patch": {
+    "bytes": 13540,
+    "sha256": "12c1d67d0f3bd6a48d704edd02c2daad82eb6f5c40383ea4eb400b6f3ca6c106"
+  },
+  "source/overlay/device/samsung/gta2swifi/tools/timekeep-local-manifest.xml": {
+    "bytes": 337,
+    "sha256": "688340b8c8f057c523a57207b05d817004a82d51a1b8d72f5dca73ff16a5b627"
+  },
+  "source/overlay/device/samsung/gta2swifi/vendor.prop": {
+    "bytes": 73,
+    "sha256": "790b9436358e281402e6c987eb0c9113d95c75e41a7222574abf935379e817f9"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/BoardConfig-wifi.mk": {
+    "bytes": 1063,
+    "sha256": "120fbed76e3a7746f20b630604367b84312b6dd390fb7ae330a90ffea3579808"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/README.md": {
+    "bytes": 992,
+    "sha256": "ba5107e38ac34a6d104c392f06c40541edcf7e3b911b9a0be6197f1939a8f0c9"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/T380WifiResourcesOverlay/Android.bp": {
+    "bytes": 250,
+    "sha256": "3a97e1fd71eb64d677171236950d4ba90e4964a350279233e1e656ead06f6cce"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/T380WifiResourcesOverlay/AndroidManifest.xml": {
+    "bytes": 394,
+    "sha256": "4c2d5b514e3ee50701b288ed4a56c137a96bc05e71d532171307a137d334cb49"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/T380WifiResourcesOverlay/res/values/config.xml": {
+    "bytes": 284,
+    "sha256": "5c0b49a7bf1c1cb8441f88c0decc1e24a6ad16c2df3265efcd96be6a1ce9e758"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/firmware.mk": {
+    "bytes": 2001,
+    "sha256": "eee4c0b92c0d87541713e859be61a7f267bf254a41c6ed6c56dbc6de996b4e3a"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/helper/Android.bp": {
+    "bytes": 347,
+    "sha256": "b232dd6515bd8ced1f5c3662f97b3c58c97e32df978d68c5f9182f8c4c7f3970"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/helper/mac.h": {
+    "bytes": 847,
+    "sha256": "9b3230a652af1d083ca58ecdde5a610935f3025ebd4cc74e4e4608702680c2fe"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/helper/prepare.cpp": {
+    "bytes": 3260,
+    "sha256": "5aa4320ec904b66a8c0bc5f45b35baa8fcd3e8f24101cb843af17d3bc3149936"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/helper/stage.cpp": {
+    "bytes": 3613,
+    "sha256": "64ef633546eb5ef39ac078f3a6c981cb4c77c6797dd05528d31c53554ea6eba0"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/payload-manifest.json": {
+    "bytes": 6053,
+    "sha256": "dc78a62c8a53bf9afb8653bc14dfff4f9cf836b52d656eb9d94fb81bfafb6e29"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/sepolicy/file_contexts": {
+    "bytes": 1840,
+    "sha256": "423fbbd3a437f747d5317acf2c608c2f27334fb70f43fc00c207a1c990e68851"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/sepolicy/genfs_contexts": {
+    "bytes": 221,
+    "sha256": "d74bf10785a27023820a1fb57debb3c2755ddae416937ac1855cfa4101c86d04"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/sepolicy/property_contexts": {
+    "bytes": 178,
+    "sha256": "f5cb1907ec149e7f4328b47614f42b1d145d25d316bb18aa14e5eb7a235beefe"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/sepolicy/t380_wifi_prepare.te": {
+    "bytes": 2751,
+    "sha256": "58ac465ac117628ca32d0ba36fa60e5d8d673a98553b38919ac340b8d7a99a25"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/t380-wifi.rc": {
+    "bytes": 2021,
+    "sha256": "feff0fa25860de95f171e55cd8c03e876f434d3b12feed61f659aeb8d51176b8"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/ueventd-wifi.rc": {
+    "bytes": 187,
+    "sha256": "8d79fb234b180b05015169fcf1ccced98af5d9e83cdbacfdcb7bd73458989480"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/wifi.mk": {
+    "bytes": 1351,
+    "sha256": "d986b8189ab8a7bb45aafa482107ef7abb3b3d5bd6e31ca0ded3e7f9449f6b24"
+  },
+  "source/overlay/device/samsung/gta2swifi/wifi/wpa_supplicant_overlay.conf": {
+    "bytes": 420,
+    "sha256": "2236162bed545e5a0a992dcdb5404b1ba79d5fd9adaaee348cb4e6d86295d4cd"
+  },
+  "source/overlay/frameworks/base/services/core/java/com/android/server/T380Telemetry.java": {
+    "bytes": 2766,
+    "sha256": "b4a42828cef9203a057c930102bf6098f206bb6c60ffbaf5083efd5699a71510"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/Makefile": {
+    "bytes": 100,
+    "sha256": "2e508bb31f060d57c6d2efc7c91715bd2e15c675b7af158e4affae58ecd7fbf8"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/gta2swifi-battery-thermal.dtsi": {
+    "bytes": 620,
+    "sha256": "79041262afeddbf4fbd12711e8dc1af49745b497c23e1fe6c7a289a6cc77ad7d"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/gta2swifi-display.dtsi": {
+    "bytes": 6427,
+    "sha256": "ce58943370207bce404886ad5755815038ccd7d87eef4f4bf3cb6b696bebcef3"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/gta2swifi-gpu.dtsi": {
+    "bytes": 223,
+    "sha256": "76c086356b022fb3e82aa6baa2df4a24f9d9d6d7752070f1e85bb73fab7e9b08"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/gta2swifi-muic-observation.dtsi": {
+    "bytes": 1200,
+    "sha256": "701117b1ab37057c16d9a85e4c78f1ab45586308d55b8b55e4cb6e7c5db3326c"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/gta2swifi-thermal.dtsi": {
+    "bytes": 1610,
+    "sha256": "4e995815099357b3dd8dd2a71e325b41fa3b7a382580cc26b5dd9f937de9208d"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/gta2swifi-touch.dtsi": {
+    "bytes": 2518,
+    "sha256": "2716ae7854f2b29cc74c9ae851d5f04a04b576cb4c9af277167071d6a7f7c140"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/gta2swifi-wifi.dtsi": {
+    "bytes": 355,
+    "sha256": "13a2a1bc2a1485ddc10fa7f875985bbcbcae2b49463893d0984d64ad3dcf0e8f"
+  },
+  "source/overlay/kernel-build/arch/arm64/boot/dts/samsung-gta2swifi/msm8917-sec-gta2swifi-r05.dts": {
+    "bytes": 9104,
+    "sha256": "d6dc3e346a4c76529e603038403b3168e59cf8f29ee7bd0c0271f1608377ebad"
+  },
+  "source/overlay/kernel-build/arch/arm64/configs/vendor/samsung/gta2swifi-battery-thermal.config": {
+    "bytes": 132,
+    "sha256": "6dbc6bc4c0929aaf7e93fd5ac866887057a13c4e0d181e43307acc2c51a18003"
+  },
+  "source/overlay/kernel-build/arch/arm64/configs/vendor/samsung/gta2swifi-diagnostic.config": {
+    "bytes": 1640,
+    "sha256": "976197001dfd28b2b651f6cdae08f794aa168d32023420b82a6e3e420e19a89b"
+  },
+  "source/overlay/kernel-build/arch/arm64/configs/vendor/samsung/gta2swifi-display.config": {
+    "bytes": 182,
+    "sha256": "7e680a71380024cde28e542838134f0e24f35c3ffa1bacff62fd540cba0429d9"
+  },
+  "source/overlay/kernel-build/arch/arm64/configs/vendor/samsung/gta2swifi-thermal.config": {
+    "bytes": 175,
+    "sha256": "5609e2d513acd479d44238e3e594ff245316ee634806342b25e0f24a4d1b5a6f"
+  },
+  "source/overlay/kernel-build/arch/arm64/configs/vendor/samsung/gta2swifi-touch.config": {
+    "bytes": 226,
+    "sha256": "8ceef55ff993c8aa721bfa28bbc05b73f1c9f18a46f17d6c0c1321e7182b4120"
+  },
+  "source/overlay/kernel-build/arch/arm64/configs/vendor/samsung/gta2swifi-wifi-hardening.config": {
+    "bytes": 100,
+    "sha256": "c833546f1edeea5034b9d9cf9919d69f6d96018379643771acacf4824bce3407"
+  },
+  "source/overlay/kernel-build/arch/arm64/configs/vendor/samsung/gta2swifi-wifi.config": {
+    "bytes": 440,
+    "sha256": "7111e93830e9ac44e408e36d764c44cdf9d4bbeeab532d851f512bcd2d55518f"
+  },
+  "source/overlay/kernel-build/drivers/input/touchscreen/t380_fts8.c": {
+    "bytes": 14192,
+    "sha256": "e4ea3646b105a23d8c0a7a00d866e2a51acd0939a91755429454443b7bc5c6aa"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/charger-observation/t380_charger_observation.h": {
+    "bytes": 5944,
+    "sha256": "050f60c0cc43cf19414ec32bd34da809f6ee879eb518fb71ab3f663f1ecc58f8"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/charger-observation/t380_charger_observation_sysfs.h": {
+    "bytes": 6198,
+    "sha256": "274102fec2b61f6aef6c1f020935ca2ebc1f22261549a4e2e5d1fdfb0c4e7479"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/muic-observation/t380_muic_extcon.h": {
+    "bytes": 8249,
+    "sha256": "ca8f704853d558260daa02706bb2ae0f49c5a71404ebc774ac859a4277dee680"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/muic-observation/t380_muic_extcon_transition.h": {
+    "bytes": 1384,
+    "sha256": "3f46a307986ccf8d95a9f873b2d84a8ba1516ceff7141db33fe9c4e57496cf96"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/muic-observation/t380_muic_observation.h": {
+    "bytes": 5705,
+    "sha256": "a989cd9a546119bc69465e99967fc1caa429d7cf635f578c6fe80e51b47de673"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/muic-observation/t380_muic_observation_sysfs.h": {
+    "bytes": 5956,
+    "sha256": "3253629ffc7ad0bfd77a8fcb10ffd385a77e9038394cf67dab596b76d708b8ce"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power027-acquisition/t380_power_acquisition.c": {
+    "bytes": 5847,
+    "sha256": "adb781a4ff035926c72af2e08a7bcbe16539a247149df10a4b412fd1f23d917c"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power027-acquisition/t380_power_acquisition.h": {
+    "bytes": 2604,
+    "sha256": "15498a94c9c47cc09684188f0f3c1ddc6c77a22c632e0ce12ba21dc4ef6b72c3"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power027-acquisition/t380_power_acquisition_kernel.h": {
+    "bytes": 13297,
+    "sha256": "118ca16f467a7c30f877cebf1c05cc3c436453de2ea71aa654650a6353c47b8a"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power028-control/t380_charge_safety_kernel.h": {
+    "bytes": 5139,
+    "sha256": "3be2858e428825ace9800969a885ff09306aefbd337778b983c8e5ea74bbccc2"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power028-control/t380_charger_settings.c": {
+    "bytes": 7031,
+    "sha256": "12d54e40d1ae444bc2d6cd7d05575a9cc89ce985e85485362cde74eba2afac9d"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power028-control/t380_charger_settings.h": {
+    "bytes": 2880,
+    "sha256": "9f178e60e51b8b8f7f44d05ded89d4e413c0d40b5295fd122f4c6600a99b9308"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power028-control/t380_inhibited_control.c": {
+    "bytes": 3214,
+    "sha256": "52e3e69ea353670aa075344642b5f9b3a7f30630656451035ae9f59d9170c6d2"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power028-control/t380_inhibited_control.h": {
+    "bytes": 1017,
+    "sha256": "d321330765716745ffcb015f9c036c61bd9880f6fadbb8d629417051d2a7debc"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power028-control/t380_inhibited_control_kernel.h": {
+    "bytes": 3473,
+    "sha256": "77acb706b3cd11680c284616a35f1e4b7a3656953287229b1ce056fb8adc46c5"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_charge_policy.c": {
+    "bytes": 22384,
+    "sha256": "166e48f9141caec9457c82c0c606226261f5b94aaebe66929715c17ebe20ea2d"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_charge_policy.h": {
+    "bytes": 6290,
+    "sha256": "efcdcb6a77859ddb004a9fdf33a9537c173a0bc1c1c116d37c1cc0e46cd5d0e5"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_periodic_kernel.h": {
+    "bytes": 120753,
+    "sha256": "c25fa4749e082f62dfca913cb64bde6b56a26ae8bedb5986d9f4f88f01a32b5e"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_periodic_policy.c": {
+    "bytes": 4780,
+    "sha256": "2fc0b57de1fc795d57f6ac9745d4cd2f330aadf29d696b4b3bf0f8f9e00a7946"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_periodic_policy.h": {
+    "bytes": 2558,
+    "sha256": "3d1d91906a9caa3dabb4e09a7078da4cf021691fc076338bd97a313e6e04d4a3"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_phase_shadow.c": {
+    "bytes": 11138,
+    "sha256": "8ddd0836b134e340b8e46e6c97118ad72f5fbc756d2b20f7032269b7537ef693"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_phase_shadow.h": {
+    "bytes": 1671,
+    "sha256": "66d8e928e4e68eac743a3d73d22f56eae0ceb09ce66202920d5469dbede3b257"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_power_acquisition_policy.h": {
+    "bytes": 1818,
+    "sha256": "37f59519fedfef953efeee7a16c530e3a01ee0428ea24bd18f7d8cbadf30bfa4"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power029-policy/t380_source_lifecycle_policy.h": {
+    "bytes": 1094,
+    "sha256": "11504193fffcca8cdff91de899cf8aabe55d5bf254b2bd09d3e818eeb5460123"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power030-trial/t380_trial_lease.c": {
+    "bytes": 2046,
+    "sha256": "78af5144e13eb6078c98f083bdccde0da73f8862c49f89c56579a2980532b055"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power030-trial/t380_trial_lease.h": {
+    "bytes": 931,
+    "sha256": "c14ebebe1727d681e8f7868499241124eaa40ba8feac50c7f4103cfdc9861ee3"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power030-trial/t380_trial_policy.c": {
+    "bytes": 3314,
+    "sha256": "654b0c4ab2e0e382f9d4d5bdbaccff8ac266b6e43a81c3219949f3d67e64c139"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power030-trial/t380_trial_policy.h": {
+    "bytes": 741,
+    "sha256": "5dad2c1c11fb329ed96dbf8a341338e10c791c9a7a9d7b34978a25070f32f1fb"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power032-session/t380_session.c": {
+    "bytes": 16561,
+    "sha256": "2c69c91e08d607fff78d3577f8328dff98fd02b8cbd95ac891cd59ef5405e516"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power032-session/t380_session.h": {
+    "bytes": 5839,
+    "sha256": "c4230cf35e73c162b5f4e9e4224f999ef65e1870599c0a70b3ffc6bc7f66ed79"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power066-regular/t380_regular_full.c": {
+    "bytes": 10511,
+    "sha256": "21e6c0f7acd7d92b6813802c66c4bc8cad48742b8ad6ecbe054a76ffacb1b730"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power066-regular/t380_regular_full.h": {
+    "bytes": 3578,
+    "sha256": "afde287fc2d58d0207e7dda8b122b8aa0638050b896d024fe9a1bf0d3feed1cd"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power066-regular/t380_regular_kernel.h": {
+    "bytes": 7175,
+    "sha256": "485fd512dbebd091f8e9da4a62a2733e477a488bc3c4c4a738245e705f656255"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power071-acquisition/t380_gauge_actor_kernel.h": {
+    "bytes": 37898,
+    "sha256": "ef09bc65ed4f6c6ea4b458a2b198472c4a1e52ceb5727b74c04265fc9d5a4396"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power075-stock/t380_stock_kernel.h": {
+    "bytes": 21351,
+    "sha256": "5564f2025043b4b0b897dd15a56828be1c359763b28fb8821c8db947aa3ec350"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power075-stock/t380_stock_policy.c": {
+    "bytes": 6630,
+    "sha256": "966dafc6b40d9e9f35ef3e1e3445aa8c90403a5977de6e7e7acd0c2ceb8b5b61"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power075-stock/t380_stock_policy.h": {
+    "bytes": 2614,
+    "sha256": "a706d2177b5570d28fb883901ee38c705dd0c97093a209f0c4f75eb3b4b3043c"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power076-muic/t380_muic_retry.c": {
+    "bytes": 6504,
+    "sha256": "f61783a8af19b8bbc1fdf702a717d3a7d74290977b57040199e0789a95cbb755"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power076-muic/t380_muic_retry.h": {
+    "bytes": 1773,
+    "sha256": "f0ab199fc2c08cc94b84ccb1879ca29e346a40da6aaed757baed86ce9fcc207f"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/power076-muic/t380_muic_retry_kernel.h": {
+    "bytes": 2195,
+    "sha256": "f8f57ce2c9b69ff24fbb42a8aa8ace3d25ef7bdc109b260eb1bd7219fcaded68"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/source-lifecycle/t380_source_lifecycle.c": {
+    "bytes": 19779,
+    "sha256": "732769ab57279f5adcccd8abd5dc63c06ce650efa7b3e22aa3bf6349e7a69f86"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/source-lifecycle/t380_source_lifecycle.h": {
+    "bytes": 4951,
+    "sha256": "06667ac91816c83bdadaf79f2bd1ccbd6f1ec915773683fbbf4f8e434a546e13"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/source-lifecycle/t380_source_lifecycle_kernel.h": {
+    "bytes": 6253,
+    "sha256": "24031e3b0ff67a1176cb5cfc8a8a4a66ec74b1af8732778b8a0c715d7691004d"
+  },
+  "source/overlay/kernel-build/drivers/power/supply/t380_diagnostic_power.c": {
+    "bytes": 9140,
+    "sha256": "3e1ba91bee294b9b9e8dbad58acb1ba2136a8980cf543ea66c3f4f8d1bd86ef2"
+  },
+  "source/overlay/kernel-build/drivers/thermal/t380_case_thermal.c": {
+    "bytes": 4162,
+    "sha256": "45ab562ad51444fa3255ff8b96be877b966f802d7d6bc76bd81d0283e396aff2"
+  },
+  "source/overlay/kernel-build/drivers/video/fbdev/msm/mdss_samsung_t380_panel.c": {
+    "bytes": 2987,
+    "sha256": "a0f3dfbc958eff25fb6aebbfac7a17c76aab76092154fa3278577aafa9e2a7b3"
+  },
+  "source/overlay/kernel-build/drivers/video/fbdev/msm/mdss_samsung_t380_panel.h": {
+    "bytes": 323,
+    "sha256": "3120ea2ea6534a212e9d478681ef6d94fe96f1e55f492661c93655a6d4de93a8"
+  },
+  "source/overlay/kernel-build/include/linux/t380_adc_thermal.h": {
+    "bytes": 2207,
+    "sha256": "1e6ebe0b8992eaed08632790c899be97b50f06ef955f14a934be04505afb91a4"
+  },
+  "source/overlay/kernel-build/include/linux/t380_diagnostic_power.h": {
+    "bytes": 1439,
+    "sha256": "a8d3d53240d20dc677055ce4bedc8209ff227db9a89c5af9727c083dd18701ac"
+  },
+  "source/overlay/kernel-build/include/linux/t380_display_admission.h": {
+    "bytes": 815,
+    "sha256": "f3606bc6d88ec1c56fda5db85cb54067542773bc6ba86f8460d085da73cb69b4"
+  },
+  "source/overlay/kernel-build/include/linux/t380_gauge_trace.h": {
+    "bytes": 716,
+    "sha256": "c9ef2f5104863e11e5290a7d564e3fb810d524ec08f7a82833dac6e6d693c58e"
+  },
+  "source/overlay/packages/apps/DocumentsUI/src/com/android/documentsui/dirlist/DirectoryViewPool.java": {
+    "bytes": 2336,
+    "sha256": "800b58e1d12df451c202a464400a9fd427414b8804ba319900a16ead856bfba3"
+  },
+  "source/overlay/packages/apps/Settings/src/com/android/settings/widget/HomepageScrollView.java": {
+    "bytes": 3153,
+    "sha256": "0f88a3c553987aaed805d15a00eb7afcf862d6c9ad7f493a9e6a1962054a4206"
+  },
+  "source/overlay/packages/apps/Settings/src/com/android/settings/widget/PreferenceInitialDraw.java": {
+    "bytes": 3409,
+    "sha256": "dc7596abc578dfa5cdf69319c42147e7f0a4aedb348c0706d92bf8459a7b8093"
+  },
+  "source/overlay/packages/apps/Settings/src/com/android/settings/widget/PreferenceRippleHelper.java": {
+    "bytes": 1897,
+    "sha256": "ea597cae81e3740838910b9ecd5dac2333b300ec653a19ae97656250332b4845"
+  },
+  "source/overlay/packages/apps/Settings/src/com/android/settings/widget/PreferenceVisibilityHelper.java": {
+    "bytes": 3085,
+    "sha256": "4e100b5483f6533076b90e46c3be44637749d16f5eae22c5b1fcd66d94dbe017"
+  },
+  "source/overlay/packages/apps/Settings/tests/robotests/src/com/android/settings/widget/HomepageScrollViewTest.java": {
+    "bytes": 3908,
+    "sha256": "890c463696dc985a4413d5a033157f2795ad21cbfb7b1031555485cedbd60c2a"
+  },
+  "source/overlay/packages/apps/Settings/tests/robotests/src/com/android/settings/widget/SettingsPresentationTest.java": {
+    "bytes": 8507,
+    "sha256": "369bf3ba2e79ff86ec14e7f61eee2c31962d073b7839b123326746bf50aee15c"
+  },
+  "source/overlay/system/core/healthd/T380MeasuredTelemetry.h": {
+    "bytes": 1628,
+    "sha256": "741db9772939273ae86c08d767358f76a941670ce083834c5f6fe8eb3425adbc"
+  },
+  "source/overlay/vendor/qcom/opensource/power/android.hardware.power-service-qti-policy.rc": {
+    "bytes": 380,
+    "sha256": "b88b990b91af51674c2df73b44364ad75ed7ddfa0593088808e8acdcdfdf94f6"
+  },
+  "source/overlay/vendor/samsung/gta2swifi/.gitignore": {
+    "bytes": 26,
+    "sha256": "fde951a61a407ba2237268685f108e0a05d98b2373ea572fe3a8df2a7b5b255b"
+  },
+  "source/overlay/vendor/samsung/gta2swifi/Android.bp": {
+    "bytes": 7781,
+    "sha256": "b9f76185a6e2e571c437785b1f144e9dc727de5a8a497db84677d58aa6487296"
+  },
+  "source/overlay/vendor/samsung/gta2swifi/NOTICE": {
+    "bytes": 962,
+    "sha256": "e2e86f44b7763da1e6e54f499c6a346287242fd63f9abe90908f83775863c86a"
+  },
+  "source/overlay/vendor/samsung/gta2swifi/SHA256SUMS": {
+    "bytes": 2176,
+    "sha256": "aaf903abbd49446d9c6cc25e8aa77e74379bf6cb78e1b4a1f7a9bf45ee76c601"
+  },
+  "source/overlay/vendor/samsung/gta2swifi/graphics-receipt.json": {
+    "bytes": 11820,
+    "sha256": "1bde1a6cc956b2d258d6031f57c097aedbeba213e06629d45e864d10267169e1"
+  },
+  "source/overlay/vendor/samsung/gta2swifi/gta2swifi-graphics-vendor.mk": {
+    "bytes": 604,
+    "sha256": "59e0746622403c1b246d68239bc80f97d83bddbf4afed121da8c4324686a3442"
+  },
+  "source/overlay/vendor/samsung/gta2swifi/import-graphics.py": {
+    "bytes": 9995,
+    "sha256": "3d9a33819c4031b5884b75521187378c9663b2bb48e1f3f60d14455782ce63e3"
+  },
+  "source/patches/build__soong.patch": {
+    "bytes": 510,
+    "sha256": "f295dffadf6471d2ad2ec510853ef6af3b4dbc1257cb5baf3c855839a332b1a4"
+  },
+  "source/patches/device__lineage__sepolicy.patch": {
+    "bytes": 367,
+    "sha256": "5c9ce7ca67e72e547a85fa1898e8100849a86aded29baf25f4b37433b22ea4f1"
+  },
+  "source/patches/device__qcom__sepolicy-legacy-um.patch": {
+    "bytes": 824,
+    "sha256": "961e8f6cc3429705954bfb637db145faaffefaafdb7208fee9ec97fb6a279134"
+  },
+  "source/patches/external__chromium-webview__patches.patch": {
+    "bytes": 293,
+    "sha256": "3caea6852e17570b42d1d076c9447e856b0dda3a9891f213019374e31efdcddd"
+  },
+  "source/patches/frameworks__base.patch": {
+    "bytes": 30322,
+    "sha256": "228e957d846f5056924534c7b4282ec50bf3dbacba6656e5dc400b21721fc594"
+  },
+  "source/patches/frameworks__native.patch": {
+    "bytes": 33949,
+    "sha256": "4f4b1bce8e05d753e88a7390ff7498a954d4e90ed55e531fdcdc7ad76d40cffa"
+  },
+  "source/patches/hardware__sony__timekeep.patch": {
+    "bytes": 13540,
+    "sha256": "12c1d67d0f3bd6a48d704edd02c2daad82eb6f5c40383ea4eb400b6f3ca6c106"
+  },
+  "source/patches/kernel-build.patch": {
+    "bytes": 77850,
+    "sha256": "e6c313fff336d3990cd7f8b86b7208f26747a453e833d082a1d10af458688f26"
+  },
+  "source/patches/lineage-sdk.patch": {
+    "bytes": 1608,
+    "sha256": "db09282c0ecb102496536fece52adcc7fd874751f104e061053287251b47c304"
+  },
+  "source/patches/packages__apps__DocumentsUI.patch": {
+    "bytes": 12014,
+    "sha256": "8d7114bc9783e4dbb26eade5a4bdbd3f0bfd181e4c4d0668dc34754b3a95448c"
+  },
+  "source/patches/packages__apps__Jelly.patch": {
+    "bytes": 1574,
+    "sha256": "9b6c304762be01f34144c076d599c5b1e1a21aa9944ff4c2c7b76a1c1602eeae"
+  },
+  "source/patches/packages__apps__Settings.patch": {
+    "bytes": 13091,
+    "sha256": "1289029bad0319ea701c59d7273fe587bc4941713ab3408acf29add63cfb3781"
+  },
+  "source/patches/packages__modules__adb.patch": {
+    "bytes": 1342,
+    "sha256": "eee4f1f4ce66b0bd71a20eae59d7a220ee7e589540e66ebd55f1f34c83f39b9c"
+  },
+  "source/patches/system__core.patch": {
+    "bytes": 7109,
+    "sha256": "2c9552f2922b465020e75f7f39f0280d58b14c8518a7cc87e8b3b94cd1a5e4c0"
+  },
+  "source/patches/vendor__lineage.patch": {
+    "bytes": 382,
+    "sha256": "db9b9a269e42d63395d116afc58766e7ffcd94bc1394fdf488ce8bb662f2547c"
+  },
+  "source/patches/vendor__qcom__opensource__display.patch": {
+    "bytes": 1598,
+    "sha256": "a3ab44a50a81b0e9ea5929b6d7fb331c075bff04d4674fc1a90cf68431a3aac5"
+  },
+  "source/patches/vendor__qcom__opensource__power.patch": {
+    "bytes": 13891,
+    "sha256": "e062e6dc02a9e33a08fdb0fb1e696c5e70f14735a6bd2f19fb882e6df03269f7"
+  },
+  "source/webview.bsdiff": {
+    "bytes": 11946,
+    "sha256": "cb5b1d453b01a09f21cdc9750627839c3862c3ef7af27c9956cad9f95da4801d"
+  },
+  "tools/build-android.sh": {
+    "bytes": 429,
+    "sha256": "760dba3b4073826db37814f06ed8fccaaa10c958fdb98ed7a9295a014593431a"
+  },
+  "tools/build-hash-helper.py": {
+    "bytes": 3639,
+    "sha256": "2184bd3da1e5135833182537f3769657190fbdedc74bdec832fafef448979f01"
+  },
+  "tools/develop.py": {
+    "bytes": 9473,
+    "sha256": "056ebf1228907e68e67cb690b151874f0ada14c13bc6979d481182498ecc9ead"
+  },
+  "tools/install.ps1": {
+    "bytes": 31974,
+    "sha256": "0afed6d91c487007cd1092381d3b214460851581a3a9638aad97db3cdf6654df"
+  },
+  "tools/package-release.py": {
+    "bytes": 2193,
+    "sha256": "f2f45431b84d066b3b48f348efead83380ca3f434e4915a57219e902fc31ebbb"
+  },
+  "tools/prepare-kernel-source.py": {
+    "bytes": 4519,
+    "sha256": "cedacbdb39a4717f5993520093f95a3cf3631e0d04d186842d7fac1398974149"
+  },
+  "tools/release_bundle.py": {
+    "bytes": 5990,
+    "sha256": "f1e1b1108d276b9d6b17424f6266a04621957b0dd981ecb6dc281646a1a6b026"
+  },
+  "tools/tests/fixtures/device-verification.json": {
+    "bytes": 2371,
+    "sha256": "fc892d9b75a4b71563462c6b5501a5f4bbe9dbb1839488268e4030b9a03d40d3"
+  },
+  "tools/tests/fixtures/manifest.json": {
+    "bytes": 444,
+    "sha256": "c2c3d2c8bcda38c7fc6b9fc6e1f2b777b8818a25c0ed080a4b42bc249593c918"
+  },
+  "tools/tests/fixtures/manifest.sig": {
+    "bytes": 512,
+    "sha256": "a153a6c82178282081a6b50b7f067af9c51b6806f43cdbb8aad47ef2e55bb93f"
+  },
+  "tools/tests/test_installer.ps1": {
+    "bytes": 4745,
+    "sha256": "af3995c0cf2267dfaf709708b1867e5c1260b8f9dd3547e2d41fc40a095772a4"
+  },
+  "tools/tests/test_public_installer.ps1": {
+    "bytes": 6652,
+    "sha256": "4a07b1b616f29ea0cf4ba9253b81b1862458467fc706caabd829b870a706c7a7"
+  },
+  "tools/tests/test_release.py": {
+    "bytes": 3264,
+    "sha256": "78df20dd1cefbf2450c2e8678a5bb5d2e1e847350490f22af13fc7bda9c45abe"
+  },
+  "tools/unpack.py": {
+    "bytes": 643,
+    "sha256": "5b1b34f2c36519d7eb68698be70a9a11a6035b94a87807a0304a8853776b2b13"
+  },
+  "tools/update-inventory.py": {
+    "bytes": 1870,
+    "sha256": "3129099e93901d160a20aa40ed121d6070ac4b5c19955d180222c40b1b468099"
+  },
+  "tools/verify-signature.ps1": {
+    "bytes": 898,
+    "sha256": "2c76e0e4a990ec55189b4d14500d0df2f3cd598e10c6bb06a0a27bbf80ab6c85"
+  },
+  "tools/verify.py": {
+    "bytes": 2926,
+    "sha256": "5bb2559ab092b3378ac6f692b1722e78788a5c5d06cf32fee9b4680550656371"
+  },
+  "trust/distribution.public.pem": {
+    "bytes": 799,
+    "sha256": "e20b6fad0fbf5f84ad108e6324763717105b84dd8c036ece0cf6280cf1e9f30e"
+  }
+}

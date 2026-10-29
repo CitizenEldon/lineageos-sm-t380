@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Firmware PNO is disabled; opt into the framework's ordinary scan fallback.
+         DeviceConfig wifi/software_pno_enabled must also be provisioned true. -->
+    <bool name="config_wifiSwPnoEnabled">true</bool>
+</resources>

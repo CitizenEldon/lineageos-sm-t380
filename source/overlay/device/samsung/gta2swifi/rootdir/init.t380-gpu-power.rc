@@ -1,0 +1,10 @@
+# Restore the stock-matched floor before the HAL can publish support.
+on post-fs
+    write /sys/class/kgsl/kgsl-3d0/min_pwrlevel 4
+    chown system system /sys/class/kgsl/kgsl-3d0/min_pwrlevel
+    chmod 0660 /sys/class/kgsl/kgsl-3d0/min_pwrlevel
+
+# A stopped service gets a final independent restoration attempt. The selected
+# service's direct onrestart command handles crash/restart ordering.
+on property:init.svc.vendor.power=stopped
+    write /sys/class/kgsl/kgsl-3d0/min_pwrlevel 4

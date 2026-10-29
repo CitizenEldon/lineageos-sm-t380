@@ -1,0 +1,9 @@
+android_app {
+    name: "T380DisplaySchedule",
+    srcs: ["src/**/*.java"],
+    platform_apis: true,
+    certificate: "platform",
+    system_ext_specific: true,
+    min_sdk_version: "35",
+    target_sdk_version: "36",
+}

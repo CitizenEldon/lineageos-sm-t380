@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<resources>
+    <!-- Non-UDFPS keyguard padding; the 72dp touch target stays unchanged. -->
+    <dimen name="lock_icon_padding">16dp</dimen>
+</resources>

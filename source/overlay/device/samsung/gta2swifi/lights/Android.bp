@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+cc_binary {
+    name: "android.hardware.lights-service.t380",
+    vendor: true,
+    relative_install_path: "hw",
+    init_rc: ["lights-t380.rc"],
+    vintf_fragments: ["lights-t380.xml"],
+    srcs: ["service.cpp", "Backlight.cpp"],
+    shared_libs: ["libbase", "libbinder_ndk", "android.hardware.light-V2-ndk"],
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+}

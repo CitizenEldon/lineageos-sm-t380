@@ -1,0 +1,35 @@
+diff --git a/app/src/main/java/org/lineageos/jelly/ui/UrlBarLayout.kt b/app/src/main/java/org/lineageos/jelly/ui/UrlBarLayout.kt
+index 9cc8982..0d9df4e 100644
+--- a/app/src/main/java/org/lineageos/jelly/ui/UrlBarLayout.kt
++++ b/app/src/main/java/org/lineageos/jelly/ui/UrlBarLayout.kt
+@@ -75,6 +75,10 @@ class UrlBarLayout @JvmOverloads constructor(
+             field = value
+ 
+             incognitoIcon.isVisible = value
++            if (value) {
++                autoCompleteTextView.imeOptions = autoCompleteTextView.imeOptions or
++                        EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
++            }
+         }
+ 
+     var loadingProgress: Int = 100
+@@ -157,9 +161,11 @@ class UrlBarLayout @JvmOverloads constructor(
+     }
+ 
+     private val suggestionsAdapter = SuggestionsAdapter(context)
++    private var inputInitialized = false
+ 
+     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+         super.onLayout(changed, left, top, right, bottom)
++        if (inputInitialized) return
+ 
+         autoCompleteTextView.setOnFocusChangeListener { view, hasFocus ->
+             onFocusChange(view, hasFocus)
+@@ -241,6 +247,7 @@ class UrlBarLayout @JvmOverloads constructor(
+         searchClearButton.setOnClickListener { clearSearch() }
+         searchPreviousButton.setOnClickListener { onSearchPositionChangeCallback?.invoke(false) }
+         searchNextButton.setOnClickListener { onSearchPositionChangeCallback?.invoke(true) }
++        inputInitialized = true
+     }
+ 
+     fun onPageLoadStarted(url: String?) {

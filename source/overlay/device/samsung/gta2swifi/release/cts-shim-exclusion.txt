@@ -1,0 +1,6 @@
+T380 private kiosk product: CTS shim exclusion
+Excluded: com.android.apex.cts.shim.v1_prebuilt
+Excluded: CtsShimPrebuilt
+Excluded: CtsShimPrivPrebuilt
+CTS cases requiring these test stubs are intentionally unsupported.
+This marker does not attest to private signing or release readiness.

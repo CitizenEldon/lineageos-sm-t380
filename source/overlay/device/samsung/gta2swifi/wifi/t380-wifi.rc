@@ -1,0 +1,51 @@
+# Candidate only. Mount identity read-only without journal replay or label writes.
+on late-fs
+    mkdir /mnt/vendor/efs 0700 root root
+    mount ext4 /dev/block/platform/soc/7824900.sdhci/by-name/efs /mnt/vendor/efs ro nodev nosuid noexec noload,context=u:object_r:t380_efs_ro_file:s0
+    mkdir /mnt/vendor/t380-wifi 0700 wifi wifi
+    restorecon /mnt/vendor/t380-wifi
+    # Stock copy rejects EFS's historical 0666 mode even on a read-only mount.
+    # Fixed reader validates the mounted file; it never changes EFS metadata.
+    exec_start vendor.t380.wifi_stage
+
+on post-fs-data && property:vendor.t380.wifi.identity_staged=1
+    mkdir /data/vendor/wifi/wpa 0770 wifi wifi
+    mkdir /data/vendor/wifi/wpa/sockets 0770 wifi wifi
+    restorecon /data/vendor/wifi/wpa /data/vendor/wifi/wpa/sockets
+    chown wifi wifi /sys/devices/platform/soc/a000000.qcom,wcnss-wlan/wcnss_mac_addr
+    chmod 0600 /sys/devices/platform/soc/a000000.qcom,wcnss-wlan/wcnss_mac_addr
+    start vendor.t380.wifi_prepare
+
+service vendor.t380.wifi_stage /vendor/bin/t380-wifi-stage
+    class core
+    user wifi
+    group wifi
+    disabled
+    oneshot
+    timeout_period 10
+
+service vendor.t380.wifi_prepare /vendor/bin/t380-wifi-prepare
+    class core
+    user wifi
+    group wifi
+    capabilities SYS_MODULE
+    disabled
+    oneshot
+    timeout_period 45
+
+# Parsed after android.hardware.wifi-service.rc. Remove the original interface
+# autostart mapping as well as disabling class startup. Binder registration is
+# still performed by the unchanged nonlazy stock executable after explicit start.
+service vendor.wifi_hal_legacy /vendor/bin/hw/android.hardware.wifi-service
+    override
+    class hal
+    capabilities NET_ADMIN NET_RAW SYS_MODULE
+    user wifi
+    group wifi gps
+    disabled
+
+on property:vendor.t380.wifi.prepared=1
+    # Loadable prima: empty fwpath writes copy a string, not reset/unload.
+    chown wifi wifi /sys/module/wlan/parameters/fwpath
+    chmod 0600 /sys/module/wlan/parameters/fwpath
+    start vendor.wifi_hal_legacy

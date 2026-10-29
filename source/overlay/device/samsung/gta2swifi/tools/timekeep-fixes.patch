@@ -1,0 +1,443 @@
+diff --git a/sepolicy/vendor/seapp_contexts b/sepolicy/vendor/seapp_contexts
+index f0e9bc8..556e19e 100644
+--- a/sepolicy/vendor/seapp_contexts
++++ b/sepolicy/vendor/seapp_contexts
+@@ -1 +1 @@
+-user=system seinfo=platform name=com.sony.timekeep domain=vendor_timekeep_app
++user=_app seinfo=platform name=com.sony.timekeep domain=vendor_timekeep_app type=app_data_file levelFrom=user
+diff --git a/sepolicy/vendor/vendor_timekeep_app.te b/sepolicy/vendor/vendor_timekeep_app.te
+index c33953a..98eac0e 100644
+--- a/sepolicy/vendor/vendor_timekeep_app.te
++++ b/sepolicy/vendor/vendor_timekeep_app.te
+@@ -4,9 +4,6 @@ app_domain(vendor_timekeep_app)
+ 
+ allow vendor_timekeep_app activity_service:service_manager find;
+ 
+-allow vendor_timekeep_app vendor_time_data_file:dir search;
+-allow vendor_timekeep_app vendor_time_data_file:file create_file_perms;
+-
+ r_dir_file(vendor_timekeep_app, sysfs_rtc)
+ 
+ set_prop(vendor_timekeep_app, vendor_timekeep_prop)
+diff --git a/src/com/sony/timekeep/TimeKeep.java b/src/com/sony/timekeep/TimeKeep.java
+index 054e95a..7d1830c 100644
+--- a/src/com/sony/timekeep/TimeKeep.java
++++ b/src/com/sony/timekeep/TimeKeep.java
+@@ -34,8 +34,7 @@ package com.sony.timekeep;
+ import java.io.File;
+ import java.io.FileInputStream;
+ import java.io.IOException;
+-import java.lang.Long;
+-import java.lang.System;
++import java.nio.charset.StandardCharsets;
+ 
+ import android.content.BroadcastReceiver;
+ import android.content.Context;
+@@ -51,32 +50,51 @@ public class TimeKeep extends BroadcastReceiver {
+ 	public void onReceive(Context context, Intent intent) {
+ 		Log.d(TAG, "Got intent " + intent + ", storing time delta.");
+ 
+-		long seconds = System.currentTimeMillis()/1000;
+-		long epoch_since = readEpoch();
+-		seconds -= epoch_since;
++		try {
++			storeAdjustment(new File(RTC_SINCE_EPOCH), System.currentTimeMillis());
++		} catch (IOException | RuntimeException e) {
++			// Retain the last learned hint when RTC input is unavailable or invalid.
++			Log.e(TAG, "Time adjustment unchanged: invalid RTC/time input", e);
++		}
++	}
+ 
+-		Log.d(TAG, "Setting adjust property to " + seconds);
+-		TimeKeepProperties.timeadjust(seconds);
++	static void storeAdjustment(File rtcFile, long wallMillis) throws IOException {
++		long epoch = readEpoch(rtcFile);
++		long adjustment = calculateOffset(wallMillis, epoch);
++		TimeKeepProperties.timeadjust(adjustment);
+ 	}
+ 
+-	private long readEpoch() {
+-		FileInputStream fis;
+-		byte[] buffer = new byte[32];
+-		int read = 0;
+-		try {
+-			fis = new FileInputStream(RTC_SINCE_EPOCH);
+-			read = fis.read(buffer);
+-			fis.close();
+-		} catch (IOException e) {
+-			Log.e(TAG, "Failed to read " + RTC_SINCE_EPOCH);
+-			e.printStackTrace();
++	static long readEpoch(File rtcFile) throws IOException {
++		try (FileInputStream fis = new FileInputStream(rtcFile)) {
++			byte[] buffer = new byte[32];
++			int count = fis.read(buffer);
++			if (count <= 0 || count == buffer.length)
++				throw new IOException("Empty or oversized RTC value");
++			return parseRtcSeconds(new String(buffer, 0, count, StandardCharsets.US_ASCII));
+ 		}
++	}
+ 
+-		long epoch = 0;
+-		if (read > 0) {
+-			epoch = Integer.parseInt(new String(buffer).split("\n")[0]);
++	static long parseRtcSeconds(String text) {
++		if (text.endsWith("\n"))
++			text = text.substring(0, text.length() - 1);
++		if (text.isEmpty())
++			throw new IllegalArgumentException("Empty RTC value");
++		for (int i = 0; i < text.length(); i++) {
++			if (text.charAt(i) < '0' || text.charAt(i) > '9')
++				throw new IllegalArgumentException("Invalid RTC value");
+ 		}
+-
++		long epoch = Long.parseLong(text);
++		if (epoch > 0xffffffffL)
++			throw new IllegalArgumentException("RTC exceeds hardware counter width");
+ 		return epoch;
+ 	}
++
++	static long calculateOffset(long wallMillis, long epoch) {
++		if (wallMillis < 0 || epoch < 0 || epoch > 0xffffffffL)
++			throw new IllegalArgumentException("Time outside supported range");
++		long seconds = wallMillis / 1000;
++		if (seconds < epoch)
++			throw new IllegalArgumentException("RTC counter is ahead of wall time");
++		return seconds - epoch;
++	}
+ }
+diff --git a/timekeep.c b/timekeep.c
+index de92ccd..f93f989 100644
+--- a/timekeep.c
++++ b/timekeep.c
+@@ -43,129 +43,190 @@
+ #include <cutils/properties.h>
+ #include <log/log.h>
+ #include <errno.h>
++#include <limits.h>
++#include <stdbool.h>
++#include <stdio.h>
++#include <sys/time.h>
+ 
++#ifndef RTC_SYS_FILE
+ #define RTC_SYS_FILE "/sys/class/rtc/rtc0/since_epoch"
++#endif
++#ifndef RTC_ATS_FILE
+ #define RTC_ATS_FILE "/data/vendor/time/ats_2"
++#endif
+ #define TIME_ADJUST_PROP "persist.vendor.timeadjust"
+ 
+-int read_epoch(unsigned long long* epoch) {
+-	int res = 0;
++/* Android wall time and the saved offset must also fit signed Java milliseconds. */
++#define MAX_TIME_SECONDS ((uint64_t)INT64_MAX / 1000)
++
++static int parse_seconds(const char *text, uint64_t maximum, uint64_t *value) {
++	char *end = NULL;
++	unsigned long long parsed;
++	if (text == NULL || text[0] < '0' || text[0] > '9')
++		return -EINVAL;
++	errno = 0;
++	parsed = strtoull(text, &end, 10);
++	if (errno == ERANGE || parsed > maximum)
++		return -ERANGE;
++	if (end == text || *end != '\0')
++		return -EINVAL;
++	*value = parsed;
++	return 0;
++}
+ 
+-	int fd = open(RTC_SYS_FILE, O_RDONLY);
+-	if (fd == -1) {
+-		res = -errno;
+-		ALOGD("Failed to open RTC sys path");
+-	} else {
+-		char buffer[16];
+-		memset(buffer, 0, 16);
+-		res = read(fd, buffer, 16);
+-		if (res > 0) {
+-			char *endp = NULL;
+-			*epoch = strtoull(buffer, &endp, 10);
+-			// sysfs read returns newline, ok to end up at '\n'
+-			if (*endp != '\0' && *endp != '\n') {
+-				ALOGI("Read from " RTC_SYS_FILE " returned "
+-				      "invalid string %s (%s)", buffer, endp);
+-				res = -1;
+-			}
+-		}
+-	}
++static int read_adjustment(uint64_t *adjustment) {
++	char prop[PROPERTY_VALUE_MAX];
++	if (property_get(TIME_ADJUST_PROP, prop, "") <= 0)
++		return -ENOENT;
++	return parse_seconds(prop, MAX_TIME_SECONDS, adjustment);
++}
+ 
+-	return res;
++static int current_seconds(uint64_t *seconds) {
++	time_t now;
++	if (time(&now) == (time_t)-1 || now < 0 ||
++	    (uint64_t)now > MAX_TIME_SECONDS)
++		return -ERANGE;
++	*seconds = (uint64_t)now;
++	return 0;
+ }
+ 
+-/* ats_2 contains the time offset as 8-byte binary representation */
+-void restore_ats(uint64_t value) {
+-	FILE *fp = NULL;
++static int build_seconds(uint64_t *seconds) {
++	char prop[PROPERTY_VALUE_MAX];
++	if (property_get("ro.build.date.utc", prop, "") <= 0)
++		return -ENOENT;
++	return parse_seconds(prop, MAX_TIME_SECONDS, seconds);
++}
+ 
+-	value *= 1000;
+-	fp = fopen(RTC_ATS_FILE, "wb");
++int read_epoch(uint64_t *epoch) {
++	char buffer[32];
++	ssize_t count;
++	int res, fd = open(RTC_SYS_FILE, O_RDONLY | O_CLOEXEC);
++	if (fd == -1)
++		return -errno;
++	do {
++		count = read(fd, buffer, sizeof(buffer) - 1);
++	} while (count < 0 && errno == EINTR);
++	res = count < 0 ? -errno : 0;
++	if (close(fd) < 0 && res == 0)
++		res = -errno;
++	if (res != 0)
++		return res;
++	if (count <= 0 || count == (ssize_t)sizeof(buffer) - 1)
++		return -EINVAL;
++	if (memchr(buffer, '\0', (size_t)count) != NULL)
++		return -EINVAL;
++	buffer[count] = '\0';
++	if (buffer[count - 1] == '\n')
++		buffer[count - 1] = '\0';
++	/* The PMIC driver exposes an unsigned32 hardware counter. */
++	return parse_seconds(buffer, UINT32_MAX, epoch);
++}
+ 
+-	if (fp != NULL) {
+-		fwrite(&value, sizeof(value), 1, fp);
+-		fclose(fp);
+-	} else {
+-		ALOGI("Can't restore " RTC_ATS_FILE);
++/* ats_2 contains the time offset as 8-byte binary representation */
++static int restore_ats(uint64_t value) {
++	char temporary[sizeof(RTC_ATS_FILE) + 32];
++	const unsigned char *bytes;
++	size_t remaining;
++	int fd, res = 0;
++	if (value > MAX_TIME_SECONDS)
++		return -ERANGE;
++	value *= 1000;
++	if (snprintf(temporary, sizeof(temporary), "%s.tmp.%ld", RTC_ATS_FILE,
++	             (long)getpid()) >= (int)sizeof(temporary))
++		return -ENAMETOOLONG;
++	fd = open(temporary, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0660);
++	if (fd < 0)
++		return -errno;
++	bytes = (const unsigned char *)&value;
++	remaining = sizeof(value);
++	while (remaining > 0) {
++		ssize_t written = write(fd, bytes, remaining);
++		if (written < 0 && errno == EINTR)
++			continue;
++		if (written <= 0) {
++			res = written < 0 ? -errno : -EIO;
++			break;
++		}
++		bytes += written;
++		remaining -= written;
+ 	}
++	if (res == 0 && fsync(fd) < 0)
++		res = -errno;
++	if (close(fd) < 0 && res == 0)
++		res = -errno;
++	if (res == 0 && rename(temporary, RTC_ATS_FILE) < 0)
++		res = -errno;
++	if (res != 0)
++		unlink(temporary);
++	return res;
+ }
+ 
+ int store_time() {
+ 	char prop[PROPERTY_VALUE_MAX];
+-	unsigned long long seconds = 0;
+-	unsigned long long epoch_since = 0;
+-	int res = -1;
+-	struct tm tm;
+-	time_t t;
+-
+-	// Get time and adjust for local time
+-	time(&t);
+-	localtime_r(&t, &tm);
+-	seconds = mktime(&tm);
+-
+-	if (seconds > 0) {
++	uint64_t seconds, epoch_since, floor;
++	int res = current_seconds(&seconds);
++	if (res == 0)
++		res = build_seconds(&floor);
++	if (res == 0)
+ 		res = read_epoch(&epoch_since);
+-		if (res < 0) {
+-			ALOGI("Failed to read epoch while storing");
+-		} else {
+-			seconds -= epoch_since;
+-			snprintf(prop, PROPERTY_VALUE_MAX, "%llu", seconds);
+-			restore_ats(seconds);
+-			property_set(TIME_ADJUST_PROP, prop);
+-			ALOGI("Time adjustment stored to property");
+-			res = 0;
+-		}
+-	}
+-
+-	return res;
++	if (res != 0)
++		return res;
++	if (seconds < epoch_since || seconds < floor)
++		return -ERANGE;
++	seconds -= epoch_since;
++	snprintf(prop, sizeof(prop), "%llu", (unsigned long long)seconds);
++	if (property_set(TIME_ADJUST_PROP, prop) < 0)
++		return -EIO;
++	return restore_ats(seconds);
+ }
+ 
+ 
+ int restore_time() {
+-	struct timeval tv;
+-	unsigned long long time_adjust = 0;
+-	unsigned long long epoch_since = 0;
+-	int res = -1;
+-	char prop[PROPERTY_VALUE_MAX];
+-	memset(prop, 0x0, PROPERTY_VALUE_MAX);
+-	property_get(TIME_ADJUST_PROP, prop, "0");
+-
+-	if (strcmp(prop, "0") != 0) {
+-		char *endp = NULL;
+-		time_adjust = strtoull(prop, &endp, 10);
+-		if (*endp != '\0') {
+-			ALOGI("Property in " TIME_ADJUST_PROP
+-			      " is not valid: %s (%d)", prop, errno);
+-			return res;
+-		}
+-	} else {
+-		ALOGI("No time adjust value found for restore");
++	struct timeval tv, current;
++	uint64_t time_adjust, epoch_since, floor, restored;
++	int res = read_adjustment(&time_adjust);
++	if (res == 0)
++		res = read_epoch(&epoch_since);
++	if (res == 0)
++		res = build_seconds(&floor);
++	if (res != 0)
+ 		return res;
+-	}
+-
+-	res = read_epoch(&epoch_since);
+-	if (res < 0) {
+-		ALOGI("Failed to read from " RTC_SYS_FILE
+-		      " (%d), bailing out", res);
+-	} else {
+-		restore_ats(time_adjust);
+-		tv.tv_sec = epoch_since + time_adjust;
+-		tv.tv_usec = 0;
+-		res = settimeofday(&tv, NULL);
+-		if (res != 0) {
+-			ALOGI("Failed to restore time (%d), root?",
+-			      res);
+-		} else {
+-			ALOGI("Time restored!");
+-		}
+-	}
++	if (time_adjust > MAX_TIME_SECONDS - epoch_since)
++		return -ERANGE;
++	restored = epoch_since + time_adjust;
++	if (restored < floor)
++		return -ERANGE;
++	tv.tv_sec = (time_t)restored;
++	if (tv.tv_sec < 0 || (uint64_t)tv.tv_sec != restored)
++		return -ERANGE;
++	tv.tv_usec = 0;
++	res = restore_ats(time_adjust);
++	if (res != 0)
++		return res;
++	/* Early init runs this synchronously before framework time detection. Finish
++	 * file I/O before sampling the full-resolution clock, then do no blocking I/O
++	 * between this check and set. This is not an atomic compare-and-set. */
++	if (gettimeofday(&current, NULL) != 0)
++		return -errno;
++	if (current.tv_sec < 0 || current.tv_usec < 0 || current.tv_usec >= 1000000)
++		return -ERANGE;
++	if (tv.tv_sec < current.tv_sec ||
++	    (tv.tv_sec == current.tv_sec && tv.tv_usec <= current.tv_usec))
++		return -ERANGE;
++	return settimeofday(&tv, NULL) == 0 ? 0 : -errno;
++}
+ 
+-	return res;
++/* Mirror the already-persisted app hint without retriggering its property action. */
++static int store_ats() {
++	uint64_t adjustment;
++	int res = read_adjustment(&adjustment);
++	return res == 0 ? restore_ats(adjustment) : res;
+ }
+ 
+ int main(int argc, char* argv[]) {
+ 	int res = -1;
+ 	if (argc != 2) {
+-		ALOGI("usage: timekeep store|restore");
++		ALOGI("usage: timekeep store|restore|store-ats");
+ 		return res;
+ 	}
+ 
+@@ -178,6 +239,11 @@ int main(int argc, char* argv[]) {
+ 	if (strcmp(argv[1], "restore") == 0) {
+ 		res = restore_time();
+ 	}
++	if (strcmp(argv[1], "store-ats") == 0) {
++		res = store_ats();
++	}
++	if (res != 0)
++		ALOGI("TimeKeep operation failed (%d)", res);
+ 
+ 	return res;
+ }
+diff --git a/timekeep.rc b/timekeep.rc
+index bcbd585..11f37cb 100644
+--- a/timekeep.rc
++++ b/timekeep.rc
+@@ -1,7 +1,10 @@
+ on post-fs-data
+     # Create folder for timekeep
+     mkdir /data/vendor/time 0770 system system
+-    chmod 0770 /data/vendor/time/ats_2
++    chmod 0660 /data/vendor/time/ats_2
++    # Root post-fs-data has loaded persistent properties; finish restore before
++    # init proceeds to BPF/network services and zygote-start.
++    exec_start vendor.timekeep-restore
+ 
+ # Time service
+ service vendor.timekeep-restore /vendor/bin/timekeep restore
+@@ -9,14 +12,15 @@ service vendor.timekeep-restore /vendor/bin/timekeep restore
+     user system
+     group system
+     capabilities SYS_TIME
++    disabled
+     oneshot
++    timeout_period 10
+     task_profiles ServiceCapacityLow
+ 
+-service vendor.timekeep-store /vendor/bin/timekeep store
++service vendor.timekeep-store /vendor/bin/timekeep store-ats
+     class late_start
+     user system
+     group system
+-    capabilities SYS_TIME
+     oneshot
+     task_profiles ServiceCapacityLow
+     disabled

@@ -1,0 +1,22 @@
+{
+  "service.cpp": {
+    "source": "hardware/interfaces/security/keymint/aidl/default/service.cpp",
+    "sha256": "4e88dda633247cb239cd683f2d748f62c79c022b87f558d8bb317c3092e1ed19"
+  },
+  "android.hardware.security.keymint-service.rc": {
+    "source": "hardware/interfaces/security/keymint/aidl/default/android.hardware.security.keymint-service.rc",
+    "sha256": "045cd6b62ddcadcc86eb0eac6b94c343eec1588ce45450d6aa592a45ddedd722"
+  },
+  "android.hardware.security.keymint-service.xml": {
+    "source": "hardware/interfaces/security/keymint/aidl/default/android.hardware.security.keymint-service.xml",
+    "sha256": "0b37e0d79b8994dda55937025ca44e7e211b28e52c5a203470651e286f5d7206"
+  },
+  "android.hardware.security.sharedsecret-service.xml": {
+    "source": "hardware/interfaces/security/keymint/aidl/default/android.hardware.security.sharedsecret-service.xml",
+    "sha256": "f4e85774cd06fc4d355a6ce5e0be738e66d0420bfc0fae5de9b6f5fccacbfaf6"
+  },
+  "android.hardware.security.secureclock-service.xml": {
+    "source": "hardware/interfaces/security/keymint/aidl/default/android.hardware.security.secureclock-service.xml",
+    "sha256": "0da6d422d25853fe4286f53d718e9451b87a3a202d20b5f9b806c127ffeef5c0"
+  }
+}

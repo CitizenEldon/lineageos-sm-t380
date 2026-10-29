@@ -1,0 +1,15 @@
+cc_binary {
+    name: "t380-wifi-prepare",
+    vendor: true,
+    srcs: ["prepare.cpp"],
+    shared_libs: ["libbase", "liblog"],
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+}
+
+cc_binary {
+    name: "t380-wifi-stage",
+    vendor: true,
+    srcs: ["stage.cpp"],
+    shared_libs: ["libbase", "liblog"],
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+}

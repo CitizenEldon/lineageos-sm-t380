@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <!-- Official lineage-23.2 HEAD captured 2026-09-27; use an exact revision. -->
+  <project name="LineageOS/android_hardware_sony_timekeep"
+           path="hardware/sony/timekeep"
+           remote="github"
+           revision="07f619c12dd80052f865c51e5d8c77d860c68c64" />
+</manifest>

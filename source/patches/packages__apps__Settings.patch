@@ -1,0 +1,277 @@
+diff --git a/res/drawable/search_bar_selected_background.xml b/res/drawable/search_bar_selected_background.xml
+index a1299c5..e675bc9 100644
+--- a/res/drawable/search_bar_selected_background.xml
++++ b/res/drawable/search_bar_selected_background.xml
+@@ -15,6 +15,19 @@
+ -->
+ 
+ <ripple xmlns:android="http://schemas.android.com/apk/res/android"
+-        android:color="?android:attr/colorControlHighlight">
+-    <item android:drawable="@color/settingslib_materialColorSurfaceContainerLowest"/>
++        android:color="?android:attr/colorControlHighlight"
++        android:effectColor="@android:color/transparent">
++    <item>
++        <shape android:shape="rectangle">
++            <solid android:color="@color/settingslib_materialColorSurfaceContainerLowest" />
++            <stroke android:width="1dp" android:color="@color/settingslib_materialColorOutlineVariant" />
++            <corners android:radius="40dp" />
++        </shape>
++    </item>
++    <item android:id="@android:id/mask">
++        <shape android:shape="rectangle">
++            <solid android:color="@android:color/white" />
++            <corners android:radius="40dp" />
++        </shape>
++    </item>
+ </ripple>
+diff --git a/res/layout/search_bar.xml b/res/layout/search_bar.xml
+index 45bb582..847ebab 100644
+--- a/res/layout/search_bar.xml
++++ b/res/layout/search_bar.xml
+@@ -15,9 +15,9 @@
+      limitations under the License.
+ -->
+ 
+-<com.google.android.material.card.MaterialCardView
++<FrameLayout
+     xmlns:android="http://schemas.android.com/apk/res/android"
+-    style="@style/SearchBarStyle_v2"
++    android:theme="@style/Theme.MaterialComponents.DayNight"
+     android:layout_width="match_parent"
+     android:layout_height="wrap_content">
+ 
+@@ -48,4 +48,4 @@
+             android:paddingEnd="8dp"
+             android:text="@string/homepage_search"/>
+     </LinearLayout>
+-</com.google.android.material.card.MaterialCardView>
++</FrameLayout>
+diff --git a/res/layout/settings_homepage_container.xml b/res/layout/settings_homepage_container.xml
+index 1d9d6fa..03172e7 100644
+--- a/res/layout/settings_homepage_container.xml
++++ b/res/layout/settings_homepage_container.xml
+@@ -22,7 +22,7 @@
+     android:layout_width="match_parent"
+     android:layout_height="match_parent">
+ 
+-    <androidx.core.widget.NestedScrollView
++    <com.android.settings.widget.HomepageScrollView
+         android:id="@+id/main_content_scrollable_container"
+         android:layout_width="match_parent"
+         android:layout_height="match_parent"
+@@ -56,7 +56,7 @@
+                 android:animateLayoutChanges="true"/>
+ 
+         </LinearLayout>
+-    </androidx.core.widget.NestedScrollView>
++    </com.android.settings.widget.HomepageScrollView>
+ 
+     <com.google.android.material.appbar.AppBarLayout
+         android:id="@+id/app_bar"
+diff --git a/src/com/android/settings/SettingsPreferenceFragment.java b/src/com/android/settings/SettingsPreferenceFragment.java
+index ab9eeb2..50c66b3 100644
+--- a/src/com/android/settings/SettingsPreferenceFragment.java
++++ b/src/com/android/settings/SettingsPreferenceFragment.java
+@@ -54,6 +54,7 @@ import com.android.settings.restriction.UserRestrictionBindingHelper;
+ import com.android.settings.support.actionbar.HelpResourceProvider;
+ import com.android.settings.widget.HighlightablePreferenceGroupAdapter;
+ import com.android.settings.widget.LoadingViewController;
++import com.android.settings.widget.PreferenceInitialDraw;
+ import com.android.settingslib.CustomDialogPreferenceCompat;
+ import com.android.settingslib.CustomEditTextPreferenceCompat;
+ import com.android.settingslib.core.instrumentation.Instrumentable;
+@@ -171,6 +172,17 @@ public abstract class SettingsPreferenceFragment extends InstrumentedPreferenceF
+         return root;
+     }
+ 
++    @Override
++    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
++        super.onViewCreated(view, savedInstanceState);
++        if (getListView() != null) {
++            new PreferenceInitialDraw(view, getListView(), this::isInitialUiReady);
++        }
++    }
++
++    /** Subclasses may report asynchronous initial availability without blocking the main thread. */
++    protected boolean isInitialUiReady() { return true; }
++
+     @Override
+     public void addPreferencesFromResource(@XmlRes int preferencesResId) {
+         super.addPreferencesFromResource(preferencesResId);
+diff --git a/src/com/android/settings/applications/appinfo/ManageAgentAppFunctionAccessPreferenceController.kt b/src/com/android/settings/applications/appinfo/ManageAgentAppFunctionAccessPreferenceController.kt
+index ec54eb0..739aa84 100644
+--- a/src/com/android/settings/applications/appinfo/ManageAgentAppFunctionAccessPreferenceController.kt
++++ b/src/com/android/settings/applications/appinfo/ManageAgentAppFunctionAccessPreferenceController.kt
+@@ -35,6 +35,9 @@ class ManageAgentAppFunctionAccessPreferenceController(context: Context, key: St
+     AppInfoPreferenceControllerBase(context, key) {
+     // Initialize as unavailable to prevent ANR; the status will be updated asynchronously.
+     private var availabilityStatus = CONDITIONALLY_UNAVAILABLE
++    private var initialAvailabilityResolved = false
++
++    override fun isInitialUiReady() = initialAvailabilityResolved
+ 
+     override fun getAvailabilityStatus() = availabilityStatus
+ 
+@@ -58,6 +61,7 @@ class ManageAgentAppFunctionAccessPreferenceController(context: Context, key: St
+                 CONDITIONALLY_UNAVAILABLE
+             }
+         mPreference?.isVisible = availabilityStatus == AVAILABLE
++        initialAvailabilityResolved = true
+     }
+ 
+     override fun handlePreferenceTreeClick(preference: Preference?): Boolean {
+diff --git a/src/com/android/settings/applications/appinfo/ManageTargetAppFunctionAccessPreferenceController.kt b/src/com/android/settings/applications/appinfo/ManageTargetAppFunctionAccessPreferenceController.kt
+index eebb89a..4d779ed 100644
+--- a/src/com/android/settings/applications/appinfo/ManageTargetAppFunctionAccessPreferenceController.kt
++++ b/src/com/android/settings/applications/appinfo/ManageTargetAppFunctionAccessPreferenceController.kt
+@@ -35,6 +35,9 @@ class ManageTargetAppFunctionAccessPreferenceController(context: Context, key: S
+     AppInfoPreferenceControllerBase(context, key) {
+     // Initialize as unavailable to prevent ANR; the status will be updated asynchronously.
+     private var availabilityStatus = CONDITIONALLY_UNAVAILABLE
++    private var initialAvailabilityResolved = false
++
++    override fun isInitialUiReady() = initialAvailabilityResolved
+ 
+     override fun getAvailabilityStatus() = availabilityStatus
+ 
+@@ -58,6 +61,7 @@ class ManageTargetAppFunctionAccessPreferenceController(context: Context, key: S
+                 CONDITIONALLY_UNAVAILABLE
+             }
+         mPreference?.isVisible = availabilityStatus == AVAILABLE
++        initialAvailabilityResolved = true
+     }
+ 
+     override fun handlePreferenceTreeClick(preference: Preference?): Boolean {
+diff --git a/src/com/android/settings/core/BasePreferenceController.java b/src/com/android/settings/core/BasePreferenceController.java
+index 7acf95c..600d28a 100644
+--- a/src/com/android/settings/core/BasePreferenceController.java
++++ b/src/com/android/settings/core/BasePreferenceController.java
+@@ -388,6 +388,9 @@ public abstract class BasePreferenceController extends AbstractPreferenceControl
+         mUiBlockListener = uiBlockListener;
+     }
+ 
++    /** Whether the first asynchronous availability decision has completed. */
++    public boolean isInitialUiReady() { return true; }
++
+     public void setUiBlockerFinished(boolean isFinished) {
+         mUiBlockerFinished = isFinished;
+     }
+diff --git a/src/com/android/settings/dashboard/DashboardFragment.java b/src/com/android/settings/dashboard/DashboardFragment.java
+index b55de4b..8e48717 100644
+--- a/src/com/android/settings/dashboard/DashboardFragment.java
++++ b/src/com/android/settings/dashboard/DashboardFragment.java
+@@ -188,6 +188,16 @@ public abstract class DashboardFragment extends SettingsPreferenceFragment
+         }
+     }
+ 
++    @Override
++    protected boolean isInitialUiReady() {
++        if (mBlockerController != null && !mBlockerController.isBlockerFinished()) return false;
++        for (AbstractPreferenceController controller : mControllers) {
++            if (controller instanceof BasePreferenceController
++                    && !((BasePreferenceController) controller).isInitialUiReady()) return false;
++        }
++        return true;
++    }
++
+     @Override
+     public void onCategoriesChanged(Set<String> categories) {
+         final String categoryKey = getCategoryKey();
+diff --git a/src/com/android/settings/system/DeveloperOptionsController.kt b/src/com/android/settings/system/DeveloperOptionsController.kt
+index 65712a7..2106c0c 100644
+--- a/src/com/android/settings/system/DeveloperOptionsController.kt
++++ b/src/com/android/settings/system/DeveloperOptionsController.kt
+@@ -55,6 +55,9 @@ constructor(
+ 
+     // Initialize as unavailable to prevent ANR; the status will be updated asynchronously.
+     private var availabilityStatus = CONDITIONALLY_UNAVAILABLE
++    private var initialAvailabilityResolved = false
++
++    override fun isInitialUiReady() = initialAvailabilityResolved
+ 
+     override fun getAvailabilityStatus() = availabilityStatus
+ 
+@@ -68,6 +71,7 @@ constructor(
+                     else -> AVAILABLE
+                 }
+             preference.isVisible = availabilityStatus == AVAILABLE
++            initialAvailabilityResolved = true
+         }
+     }
+ 
+diff --git a/src/com/android/settings/widget/HighlightablePreferenceGroupAdapter.java b/src/com/android/settings/widget/HighlightablePreferenceGroupAdapter.java
+index 2ad1303..bf13a27 100644
+--- a/src/com/android/settings/widget/HighlightablePreferenceGroupAdapter.java
++++ b/src/com/android/settings/widget/HighlightablePreferenceGroupAdapter.java
+@@ -63,6 +63,7 @@ public class HighlightablePreferenceGroupAdapter extends SettingsPreferenceGroup
+     @VisibleForTesting @DrawableRes final int mHighlightBackgroundRes;
+     @VisibleForTesting boolean mFadeInAnimated;
+ 
++    private final PreferenceVisibilityHelper mVisibilityHelper;
+     private final Context mContext;
+     private final @DrawableRes int mNormalBackgroundRes;
+     private final @Nullable String mHighlightKey;
+@@ -104,7 +105,14 @@ public class HighlightablePreferenceGroupAdapter extends SettingsPreferenceGroup
+             @NonNull PreferenceGroup preferenceGroup,
+             @Nullable String key,
+             boolean highlightRequested) {
+-        super(preferenceGroup);
++        this(new PreferenceVisibilityHelper(preferenceGroup), key, highlightRequested);
++    }
++
++    private HighlightablePreferenceGroupAdapter(PreferenceVisibilityHelper visibilityHelper,
++            @Nullable String key, boolean highlightRequested) {
++        super(visibilityHelper.prepare());
++        mVisibilityHelper = visibilityHelper;
++        PreferenceGroup preferenceGroup = visibilityHelper.prepare();
+         mHighlightKey = key;
+         mHighlightRequested = highlightRequested;
+         mContext = preferenceGroup.getContext();
+@@ -113,10 +121,19 @@ public class HighlightablePreferenceGroupAdapter extends SettingsPreferenceGroup
+         mHighlightBackgroundRes = R.drawable.preference_background_highlighted;
+     }
+ 
++    @Override
++    public void onPreferenceHierarchyChange(@NonNull Preference preference) {
++        // The superclass constructor can call this before our helper field is initialized.
++        if (mVisibilityHelper != null) mVisibilityHelper.update();
++        super.onPreferenceHierarchyChange(preference);
++    }
++
+     @Override
+     public void onBindViewHolder(@NonNull PreferenceViewHolder holder, int position) {
+         super.onBindViewHolder(holder, position);
+         updateBackground(holder, position);
++        PreferenceRippleHelper.smooth(holder.itemView.getBackground());
++        PreferenceRippleHelper.smooth(holder.itemView.getForeground());
+     }
+ 
+     @VisibleForTesting
+diff --git a/tests/robotests/Android.bp b/tests/robotests/Android.bp
+index e29b291..7554622 100644
+--- a/tests/robotests/Android.bp
++++ b/tests/robotests/Android.bp
+@@ -144,3 +144,23 @@ java_library {
+     ],
+     test_only: true,
+ }
++
++// Focused regression coverage for bounded homepage measurement and scrolling.
++android_robolectric_test {
++    name: "T380HomepageScrollViewRoboTests",
++    srcs: ["src/com/android/settings/widget/HomepageScrollViewTest.java"],
++    static_libs: ["androidx.test.core", "truth"],
++    instrumentation_for: "SettingsRoboTestStub",
++    test_options: { timeout: 300 },
++    strict_mode: false,
++}
++
++// Shared preference availability, initial presentation and feedback regressions.
++android_robolectric_test {
++    name: "T380SettingsPresentationRoboTests",
++    srcs: ["src/com/android/settings/widget/SettingsPresentationTest.java"],
++    static_libs: ["androidx.test.core", "truth"],
++    instrumentation_for: "SettingsRoboTestStub",
++    test_options: { timeout: 300 },
++    strict_mode: false,
++}

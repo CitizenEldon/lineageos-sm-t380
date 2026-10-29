@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# T380 diagnostic builds only. Package under /system/etc/init, so the write
+# executes in init (which already has sysfs_wake_lock and BLOCK_SUSPEND access).
+# lpm_levels.sleep_disabled only limits cpuidle, not Android system suspend.
+# Keep this explicit lock until wake and inhibit retention are validated.
+# Release this exact name manually only for a coordinator-controlled test.
+on init && property:ro.debuggable=1
+    write /sys/power/wake_lock t380-development-awake

@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# Full Android diagnostic only: this filesystem is volatile across reboots.
+# Parsed before aconfigd.rc in /system/etc/init. The existing platform aconfig
+# actions create and label their own subdirectories; keep their policy intact.
+# /metadata must be an actual directory in the system-as-root image.
+on early-init && property:ro.t380.volatile_metadata=1
+    mount tmpfs tmpfs /metadata nosuid nodev noexec mode=0755,uid=0,gid=0,size=32m
+    restorecon /metadata

@@ -1,0 +1,2 @@
+genfscon sysfs /devices/platform/soc/a000000.qcom,wcnss-wlan/wcnss_mac_addr u:object_r:sysfs_t380_wcnss_mac:s0
+genfscon sysfs /devices/platform/soc/a000000.qcom,wcnss-wlan/wcnss_ready u:object_r:sysfs_t380_wcnss_ready:s0

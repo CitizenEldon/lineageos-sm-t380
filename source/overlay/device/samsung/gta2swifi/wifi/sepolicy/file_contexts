@@ -1,0 +1,23 @@
+/(vendor|system/vendor)/bin/t380-wifi-prepare u:object_r:t380_wifi_prepare_exec:s0
+/(vendor|system/vendor)/bin/t380-wifi-stage u:object_r:t380_wifi_stage_exec:s0
+/(vendor|system/vendor)/lib/modules/wlan\.ko u:object_r:t380_wifi_module_file:s0
+/mnt/vendor/t380-wifi(/.*)? u:object_r:t380_wifi_mac_file:s0
+
+# Exact pinned firmware files; retain directory and unrelated vendor labels.
+/(vendor|system/vendor)/firmware/regulatory\.db u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/regulatory\.db\.p7s u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b00 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b01 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b02 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b04 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b06 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b09 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b10 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b11 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.b12 u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wcnss\.mdt u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wlan/prima/grippower\.info u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wlan/prima/WCNSS_cfg\.dat u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wlan/prima/WCNSS_qcom_cfg\.ini u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wlan/prima/WCNSS_qcom_wlan_nv\.bin u:object_r:vendor_firmware_file:s0
+/(vendor|system/vendor)/firmware/wlan/prima/WCNSS_wlan_dictionary\.dat u:object_r:vendor_firmware_file:s0

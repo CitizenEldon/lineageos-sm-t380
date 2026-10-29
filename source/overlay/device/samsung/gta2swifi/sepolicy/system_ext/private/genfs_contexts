@@ -1,0 +1,3 @@
+genfscon sysfs /devices/platform/i2c-charger/i2c-6/6-0049/stock_status u:object_r:sysfs_t380_charge_observe:s0
+
+genfscon sysfs /devices/platform/i2c-fuelgauge/i2c-7/7-0071/android_telemetry u:object_r:sysfs_t380_measured_telemetry:s0

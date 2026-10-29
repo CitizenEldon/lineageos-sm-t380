@@ -1,0 +1,46 @@
+# Uncompiled review candidate; no permissive domain, fake status, identity write.
+type t380_wifi_prepare, domain;
+type t380_wifi_prepare_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(t380_wifi_prepare)
+type t380_wifi_mac_file, file_type;
+type t380_efs_ro_file, fs_type, contextmount_type;
+type t380_wifi_module_file, vendor_file_type, file_type;
+type sysfs_t380_wcnss_mac, fs_type, sysfs_type;
+type sysfs_t380_wcnss_ready, fs_type, sysfs_type;
+vendor_internal_prop(vendor_t380_wifi_prepared_prop)
+set_prop(t380_wifi_prepare, vendor_t380_wifi_prepared_prop)
+get_prop(vendor_init, vendor_t380_wifi_prepared_prop)
+allow t380_wifi_prepare self:capability sys_module;
+allow t380_wifi_prepare mnt_vendor_file:dir search;
+allow t380_wifi_prepare t380_wifi_mac_file:dir search;
+allow t380_wifi_prepare t380_wifi_mac_file:file r_file_perms;
+allow t380_wifi_prepare wcnss_device:chr_file r_file_perms;
+allow t380_wifi_prepare sysfs_t380_wcnss_mac:file { open write getattr };
+allow t380_wifi_prepare sysfs_t380_wcnss_ready:file r_file_perms;
+r_dir_file(t380_wifi_prepare, sysfs_net)
+allow t380_wifi_prepare sysfs:dir search;
+allow t380_wifi_prepare t380_wifi_module_file:file r_file_perms;
+allow t380_wifi_prepare t380_wifi_module_file:system module_load;
+# Fixed staging service reads the legacy 0666 MAC from read-only EFS.
+# It has no module/sysfs permissions and needs no capabilities. Its only
+# property write is the dedicated successful-staging authorization below.
+type t380_wifi_stage, domain;
+type t380_wifi_stage_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(t380_wifi_stage)
+vendor_internal_prop(vendor_t380_wifi_identity_staged_prop)
+set_prop(t380_wifi_stage, vendor_t380_wifi_identity_staged_prop)
+neverallow t380_wifi_stage { property_type -vendor_t380_wifi_identity_staged_prop }:property_service set;
+get_prop(vendor_init, vendor_t380_wifi_identity_staged_prop)
+allow t380_wifi_stage mnt_vendor_file:dir search;
+allow t380_wifi_stage t380_efs_ro_file:dir { getattr search };
+allow t380_wifi_stage t380_efs_ro_file:file { getattr open read };
+allow t380_wifi_stage t380_efs_ro_file:filesystem getattr;
+allow t380_wifi_stage t380_wifi_mac_file:dir { getattr search write add_name remove_name };
+allow t380_wifi_stage t380_wifi_mac_file:file { create open write unlink };
+allow t380_wifi_stage tmpfs:filesystem getattr;
+# Init creates only the protected volatile directory.
+# mount executes in init, even when requested by a vendor RC (builtins.cpp).
+# contextmount_type also enforces the platform neverallow against EFS writes.
+allow init t380_efs_ro_file:filesystem { mount relabelto getattr };
+allow vendor_init t380_wifi_mac_file:dir create_dir_perms;
+allow vendor_init sysfs_t380_wcnss_mac:file setattr;

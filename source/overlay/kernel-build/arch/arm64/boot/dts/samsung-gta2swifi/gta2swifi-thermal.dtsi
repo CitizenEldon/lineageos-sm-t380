@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* Captured Samsung Rev05 live.dts: channel 0x13 and sec_thermistor table. */
+/ {
+	t380_case_therm: case-thermistor {
+		compatible = "samsung,t380-case-thermal";
+		io-channels = <&pm8937_vadc VADC_P_MUX4_1_1>;
+		io-channel-names = "case-thermistor";
+		#thermal-sensor-cells = <0>;
+		samsung,adc-codes = <
+			0x6515 0x65ee 0x66e8 0x6812 0x695e 0x6add
+			0x6cc8 0x6f09 0x7198 0x745c 0x777a 0x7ad3
+			0x7e67 0x82dc 0x86dc 0x8b49 0x8f7a 0x932f
+			0x9716 0x9a06 0x9ce3 0x9f14 0xa0d6>;
+		/* Signed deci-C values, copied without rounding or voltage scaling. */
+		samsung,temperatures-decicelsius = <
+			900 850 800 750 700 650 600 550 500 450 400 350
+			300 250 200 150 100 50 0
+			0xffffffce 0xffffff9c 0xffffff6a 0xffffff38>;
+	};
+};
+
+&pm8937_vadc {
+	case_therm {
+		/* Samsung register encodings: decimation0, settle2, average0. */
+		qcom,decimation = <512>;
+		qcom,hw-settle-time = <200>;
+		qcom,avg-samples = <1>;
+	};
+};
+
+/* 0x11/MPP2 is the Samsung earjack voltage input, not a thermistor.
+ * Disable only its thermal client; retain VADC/pin wiring for later audio. */
+&pm8937_adc_tm_iio {
+	/* This donor ignores child status and requires one IIO entry per child. */
+	io-channels = <&pm8937_vadc VADC_LR_MUX3_XO_THERM>,
+		      <&pm8937_vadc VADC_LR_MUX3_BUF_XO_THERM>,
+		      <&pm8937_vadc VADC_P_MUX4_1_1>;
+	/delete-node/ pa_therm1;
+};
+
+&thermal_zones {
+	/delete-node/ pa-therm1-adc;
+	t380-case {
+		thermal-sensors = <&t380_case_therm>;
+		polling-delay = <0>;
+		polling-delay-passive = <0>;
+		/* On-demand telemetry only: no invented trips or cooling policy. */
+	};
+};

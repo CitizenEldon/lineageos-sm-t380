@@ -1,0 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/* MSM8917 donor and captured Samsung Rev05 use chip 0x03000620 and the
+ * same stock GPU power levels. No clock, voltage or security override. */
+&msm_gpu {
+    status = "okay";
+};

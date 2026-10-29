@@ -1,0 +1,402 @@
+diff --git a/Android.bp b/Android.bp
+index 60c2908..2a50b30 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -9,7 +9,10 @@ cc_binary {
+     defaults: [
+         "android.hardware.power-ndk_shared",
+     ],
+-    init_rc: ["android.hardware.power-service-qti.rc"],
++    init_rc: select(soong_config_variable("qtipower", "policy_ext_lib"), {
++        any: ["android.hardware.power-service-qti-policy.rc"],
++        default: ["android.hardware.power-service-qti.rc"],
++    }),
+     relative_install_path: "hw",
+     vendor: true,
+ 
+@@ -33,6 +36,9 @@ cc_binary {
+     }) + select(soong_config_variable("qtipower", "tap_to_wake_node"), {
+         any @ node: ["-DTAP_TO_WAKE_NODE=\"" + node + "\""],
+         default: [],
++    }) + select(soong_config_variable("qtipower", "policy_ext_lib"), {
++        any: ["-DPOLICY_EXT"],
++        default: [],
+     }),
+ 
+     srcs: [
+@@ -54,19 +60,46 @@ cc_binary {
+         default: [],
+     }),
+ 
+-    header_libs: ["libhardware_headers"],
++    // The exact board policy uses only the AIDL service shell. Do not compile
++    // the unused legacy perf parser, dynamic client, or hint-session backend.
++    exclude_srcs: select(soong_config_variable("qtipower", "policy_ext_lib"), {
++        any: [
++            "power-common.c",
++            "metadata-parser.c",
++            "utils.c",
++            "list.c",
++            "hint-data.c",
++            "PowerHintSession.cpp",
++            "power-8996.c",
++            "power-8937.c",
++            "power-8953.c",
++            "power-8998.c",
++            "power-660.c",
++            "power-845.c",
++        ],
++        default: [],
++    }),
++
++    header_libs: select(soong_config_variable("qtipower", "policy_ext_lib"), {
++        any: [],
++        default: ["libhardware_headers"],
++    }),
+ 
+     shared_libs: [
+         "android.hardware.common-V2-ndk",
+         "android.hardware.common.fmq-V1-ndk",
+         "liblog",
+-        "libcutils",
+-        "libdl",
+         "libbase",
+-        "libfmq",
+-        "libutils",
+         "libbinder_ndk",
+-    ],
++    ] + select(soong_config_variable("qtipower", "policy_ext_lib"), {
++        any: [],
++        default: [
++            "libcutils",
++            "libdl",
++            "libfmq",
++            "libutils",
++        ],
++    }),
+ 
+     static_libs: select(soong_config_variable("qtipower", "mode_ext_lib"), {
+         any @ lib: [lib],
+@@ -74,6 +107,9 @@ cc_binary {
+     }) + select(soong_config_variable("qtipower", "set_interactive_ext_lib"), {
+         any @ lib: [lib],
+         default: [],
++    }) + select(soong_config_variable("qtipower", "policy_ext_lib"), {
++        any @ lib: [lib],
++        default: [],
+     }),
+ }
+ 
+diff --git a/Power.cpp b/Power.cpp
+index 0a46f4c..1b745f2 100644
+--- a/Power.cpp
++++ b/Power.cpp
+@@ -34,28 +34,34 @@
+ #define LOG_TAG "android.hardware.power-service-qti"
+ 
+ #include "Power.h"
++#ifndef POLICY_EXT
+ #include "PowerHintSession.h"
+-
+-#include <android-base/file.h>
+-#include <android-base/logging.h>
+ #include <fmq/AidlMessageQueue.h>
+ #include <fmq/EventFlag.h>
+ #include <thread>
++#endif
+ 
+ #include <aidl/android/hardware/power/BnPower.h>
+ 
++#include <android-base/file.h>
+ #include <android-base/logging.h>
+ #include <android/binder_manager.h>
+ #include <android/binder_process.h>
+ 
++#ifndef POLICY_EXT
+ using ::aidl::android::hardware::common::fmq::MQDescriptor;
+ using ::aidl::android::hardware::common::fmq::SynchronizedReadWrite;
++#endif
+ using ::aidl::android::hardware::power::BnPower;
+ using ::aidl::android::hardware::power::Boost;
++#ifndef POLICY_EXT
+ using ::aidl::android::hardware::power::ChannelMessage;
++#endif
+ using ::aidl::android::hardware::power::IPower;
+ using ::aidl::android::hardware::power::Mode;
++#ifndef POLICY_EXT
+ using ::android::AidlMessageQueue;
++#endif
+ 
+ using ::ndk::ScopedAStatus;
+ using ::ndk::SharedRefBase;
+@@ -66,22 +72,51 @@ namespace hardware {
+ namespace power {
+ namespace impl {
+ 
++#ifdef POLICY_EXT
++extern bool initializeDeviceSpecificPower();
++extern void shutdownDeviceSpecificPower();
++extern bool isDeviceSpecificModeSupported(Mode type, bool* _aidl_return);
++extern bool setDeviceSpecificMode(Mode type, bool enabled);
++extern bool isDeviceSpecificBoostSupported(Boost type, bool* _aidl_return);
++extern bool setDeviceSpecificBoost(Boost type, int32_t durationMs);
++#else
+ #ifdef MODE_EXT
+ extern bool isDeviceSpecificModeSupported(Mode type, bool* _aidl_return);
+ extern bool setDeviceSpecificMode(Mode type, bool enabled);
+ #endif
++#endif
+ 
++Power::Power() : BnPower() {
++#ifdef POLICY_EXT
++    initializeDeviceSpecificPower();
++#else
++    power_init();
++#endif
++}
++
++Power::~Power() {
++#ifdef POLICY_EXT
++    shutdownDeviceSpecificPower();
++#endif
++}
++
++#ifndef POLICY_EXT
+ void setInteractive(bool interactive) {
+     set_interactive(interactive ? 1 : 0);
+ }
++#endif
+ 
+ ndk::ScopedAStatus Power::setMode(Mode type, bool enabled) {
+     LOG(INFO) << "Power setMode: " << static_cast<int32_t>(type) << " to: " << enabled;
+-#ifdef MODE_EXT
++#if defined(MODE_EXT) || defined(POLICY_EXT)
+     if (setDeviceSpecificMode(type, enabled)) {
+         return ndk::ScopedAStatus::ok();
+     }
+ #endif
++#ifdef POLICY_EXT
++    LOG(INFO) << "Mode " << static_cast<int32_t>(type) << " Not Supported";
++    return ndk::ScopedAStatus::ok();
++#else
+     switch (type) {
+ #ifdef TAP_TO_WAKE_NODE
+         case Mode::DOUBLE_TAP_TO_WAKE:
+@@ -119,15 +154,20 @@ ndk::ScopedAStatus Power::setMode(Mode type, bool enabled) {
+             break;
+     }
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
+ ndk::ScopedAStatus Power::isModeSupported(Mode type, bool* _aidl_return) {
+     LOG(INFO) << "Power isModeSupported: " << static_cast<int32_t>(type);
+-#ifdef MODE_EXT
++#if defined(MODE_EXT) || defined(POLICY_EXT)
+     if (isDeviceSpecificModeSupported(type, _aidl_return)) {
+         return ndk::ScopedAStatus::ok();
+     }
+ #endif
++#ifdef POLICY_EXT
++    *_aidl_return = false;
++    return ndk::ScopedAStatus::ok();
++#else
+     switch (type) {
+         case Mode::EXPENSIVE_RENDERING:
+             if (is_expensive_rendering_supported()) {
+@@ -150,10 +190,16 @@ ndk::ScopedAStatus Power::isModeSupported(Mode type, bool* _aidl_return) {
+             break;
+     }
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
+ ndk::ScopedAStatus Power::setBoost(Boost type, int32_t durationMs) {
+     LOG(INFO) << "Power setBoost: " << static_cast<int32_t>(type) << ", duration: " << durationMs;
++#ifdef POLICY_EXT
++    if (!setDeviceSpecificBoost(type, durationMs)) {
++        LOG(INFO) << "Boost " << static_cast<int32_t>(type) << " Not Supported";
++    }
++#else
+     switch (type) {
+         case Boost::INTERACTION:
+             power_hint(POWER_HINT_INTERACTION, &durationMs);
+@@ -162,11 +208,15 @@ ndk::ScopedAStatus Power::setBoost(Boost type, int32_t durationMs) {
+             LOG(INFO) << "Boost " << static_cast<int32_t>(type) << "Not Supported";
+             break;
+     }
++#endif
+     return ndk::ScopedAStatus::ok();
+ }
+ 
+ ndk::ScopedAStatus Power::isBoostSupported(Boost type, bool* _aidl_return) {
+     LOG(INFO) << "Power isBoostSupported: " << static_cast<int32_t>(type);
++#ifdef POLICY_EXT
++    if (!isDeviceSpecificBoostSupported(type, _aidl_return)) *_aidl_return = false;
++#else
+     switch (type) {
+         case Boost::INTERACTION:
+             *_aidl_return = true;
+@@ -175,6 +225,7 @@ ndk::ScopedAStatus Power::isBoostSupported(Boost type, bool* _aidl_return) {
+             *_aidl_return = false;
+             break;
+     }
++#endif
+     return ndk::ScopedAStatus::ok();
+ }
+ 
+@@ -183,6 +234,10 @@ ndk::ScopedAStatus Power::createHintSession(int32_t tgid, int32_t uid,
+                                             int64_t durationNanos,
+                                             std::shared_ptr<IPowerHintSession>* _aidl_return) {
+     LOG(INFO) << "Power createHintSession";
++#ifdef POLICY_EXT
++    *_aidl_return = nullptr;
++    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++#else
+     if (threadIds.size() == 0) {
+         LOG(ERROR) << "Error: threadIds.size() shouldn't be " << threadIds.size();
+         *_aidl_return = nullptr;
+@@ -190,17 +245,26 @@ ndk::ScopedAStatus Power::createHintSession(int32_t tgid, int32_t uid,
+     }
+     *_aidl_return = setPowerHintSession(tgid, uid, threadIds, durationNanos);
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
+ ndk::ScopedAStatus Power::createHintSessionWithConfig(
+         int32_t tgid, int32_t uid, const std::vector<int32_t>& threadIds, int64_t durationNanos,
+         SessionTag, SessionConfig* config, std::shared_ptr<IPowerHintSession>* _aidl_return) {
++#ifdef POLICY_EXT
++    *_aidl_return = nullptr;
++    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++#else
+     auto out = createHintSession(tgid, uid, threadIds, durationNanos, _aidl_return);
+     static_cast<PowerHintSessionImpl*>(_aidl_return->get())->getSessionConfig(config);
+     return out;
++#endif
+ }
+ 
+ ndk::ScopedAStatus Power::getSessionChannel(int32_t, int32_t, ChannelConfig* _aidl_return) {
++#ifdef POLICY_EXT
++    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++#else
+     static AidlMessageQueue<ChannelMessage, SynchronizedReadWrite> stubQueue{20, true};
+     static std::thread stubThread([&] {
+         ChannelMessage data;
+@@ -214,18 +278,28 @@ ndk::ScopedAStatus Power::getSessionChannel(int32_t, int32_t, ChannelConfig* _ai
+     _aidl_return->writeFlagBitmask = 0x02;
+     _aidl_return->eventFlagDescriptor = std::nullopt;
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
+ ndk::ScopedAStatus Power::closeSessionChannel(int32_t, int32_t) {
++#ifdef POLICY_EXT
++    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++#else
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
+ ndk::ScopedAStatus Power::getHintSessionPreferredRate(int64_t* outNanoseconds) {
+     LOG(INFO) << "Power getHintSessionPreferredRate";
++#ifdef POLICY_EXT
++    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++#else
+     *outNanoseconds = getSessionPreferredRate();
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
++#ifndef POLICY_EXT
+ template <class T>
+ constexpr size_t enum_size() {
+     return static_cast<size_t>(*(ndk::enum_range<T>().end() - 1)) + 1;
+@@ -235,9 +309,34 @@ template <class E>
+ int64_t bitsForEnum() {
+     return static_cast<int64_t>(std::bitset<enum_size<E>()>().set().to_ullong());
+ }
++#endif
+ 
+ ndk::ScopedAStatus Power::getSupportInfo(SupportInfo* _aidl_return) {
+     LOG(INFO) << "Power getSupportInfo";
++#ifdef POLICY_EXT
++    bool launchSupported = false;
++    bool interactionSupported = false;
++    isDeviceSpecificModeSupported(Mode::LAUNCH, &launchSupported);
++    isDeviceSpecificBoostSupported(Boost::INTERACTION, &interactionSupported);
++    SupportInfo supportInfo = {.usesSessions = false,
++                               .boosts = interactionSupported
++                                       ? int64_t{1} << static_cast<int32_t>(Boost::INTERACTION)
++                                       : 0,
++                               .modes = launchSupported
++                                       ? int64_t{1} << static_cast<int32_t>(Mode::LAUNCH)
++                                       : 0,
++                               .sessionHints = 0,
++                               .sessionModes = 0,
++                               .sessionTags = 0,
++                               .compositionData = {.isSupported = false,
++                                                   .disableGpuFences = false,
++                                                   .maxBatchSize = 1,
++                                                   .alwaysBatch = false},
++                               .headroom = {.isCpuSupported = false,
++                                            .isGpuSupported = false,
++                                            .cpuMinIntervalMillis = 0,
++                                            .gpuMinIntervalMillis = 0}};
++#else
+     static SupportInfo supportInfo = {.usesSessions = false,
+                                       .boosts = bitsForEnum<Boost>(),
+                                       .modes = bitsForEnum<Mode>(),
+@@ -257,6 +356,7 @@ ndk::ScopedAStatus Power::getSupportInfo(SupportInfo* _aidl_return) {
+                                               .cpuMinIntervalMillis = 0,
+                                               .gpuMinIntervalMillis = 0,
+                                       }};
++#endif
+     *_aidl_return = supportInfo;
+     return ndk::ScopedAStatus::ok();
+ }
+@@ -273,12 +373,20 @@ ndk::ScopedAStatus Power::getGpuHeadroom(const GpuHeadroomParams&, GpuHeadroomRe
+ 
+ ndk::ScopedAStatus Power::sendCompositionData(const std::vector<CompositionData>&) {
+     LOG(INFO) << "Power sendCompositionData";
++#ifdef POLICY_EXT
++    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++#else
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
+ ndk::ScopedAStatus Power::sendCompositionUpdate(const CompositionUpdate&) {
+     LOG(INFO) << "Power sendCompositionUpdate";
++#ifdef POLICY_EXT
++    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
++#else
+     return ndk::ScopedAStatus::ok();
++#endif
+ }
+ 
+ }  // namespace impl
+diff --git a/Power.h b/Power.h
+index ef7e16f..09c7958 100644
+--- a/Power.h
++++ b/Power.h
+@@ -32,7 +32,9 @@
+ 
+ #include <aidl/android/hardware/power/BnPower.h>
+ #include "aidl/android/hardware/power/SessionTag.h"
++#ifndef POLICY_EXT
+ #include "power-common.h"
++#endif
+ 
+ namespace aidl {
+ namespace android {
+@@ -42,7 +44,8 @@ namespace impl {
+ 
+ class Power : public BnPower {
+   public:
+-    Power() : BnPower() { power_init(); }
++    Power();
++    ~Power() override;
+     ndk::ScopedAStatus setMode(Mode type, bool enabled) override;
+     ndk::ScopedAStatus isModeSupported(Mode type, bool* _aidl_return) override;
+     ndk::ScopedAStatus setBoost(Boost type, int32_t durationMs) override;

@@ -1,0 +1,11 @@
+diff --git a/os_pickup.bp b/os_pickup.bp
+index 39ffd45..eeca82d 100644
+--- a/os_pickup.bp
++++ b/os_pickup.bp
+@@ -55,6 +55,5 @@ android_app_import {
+     optional_uses_libs: [
+         "android.test.base",
+         "androidx.window.extensions",
+-        "com.android.extensions.xr",
+     ],
+ }
